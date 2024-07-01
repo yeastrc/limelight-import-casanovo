@@ -35,25 +35,22 @@ import java.io.InputStreamReader;
 		synopsisHeading = "%n",
 		descriptionHeading = "%n@|bold,underline Description:|@%n%n",
 		optionListHeading = "%n@|bold,underline Options:|@%n",
-		description = "Convert the results of a CONGA analysis to a Limelight XML file suitable for import into Limelight.\n\n" +
+		description = "Convert the results of a Casanovo analysis to a Limelight XML file suitable for import into Limelight.\n\n" +
 				"More info at: " + Constants.CONVERSION_PROGRAM_URI
 )
 
 /**
  * @author Michael Riffle
- * @date Jan 18, 2023
+ * @date 2024
  *
  */
 public class MainProgram implements Runnable {
 
-	@CommandLine.Option(names = { "-f", "--fasta-file" }, required = true, description = "Full path to FASTA file used in the experiment. E.g., /data/yeast.fa")
-	private File fastaFile;
+	@CommandLine.Option(names = { "-m", "--mztab" }, required = true, description = "Full path to the Casanovo results file (ends with .mztab). E.g., /data/results/results.mztab")
+	private File mztabFile;
 
-	@CommandLine.Option(names = { "-t", "--conga-target_mods" }, required = true, description = "Full path to the CONGA \".target_mods.txt\" file (results) E.g., /data/results/conga.target_mods.txt.")
-	private File targetsFile;
-
-	@CommandLine.Option(names = { "-l", "--conga-log" }, required = true, description = "Full path to the CONGA log file E.g., /data/results/conga.log.txt")
-	private File logFile;
+	@CommandLine.Option(names = { "-c", "--config-yaml" }, required = true, description = "Full path to configuration file. E.g., ./casanovo.yaml")
+	private File configFile;
 
 	@CommandLine.Option(names = { "-o", "--out-file" }, required = true, description = "Full path to use for the Limelight XML output file. E.g., /data/my_analysis/crux.limelight.xml")
 	private File outFile;
@@ -67,18 +64,13 @@ public class MainProgram implements Runnable {
 
 		printRuntimeInfo();
 
-		if( !logFile.exists() ) {
-			System.err.println( "Could not find log file: " + logFile.getAbsolutePath() );
+		if( !mztabFile.exists() ) {
+			System.err.println( "Could not find mztab file: " + mztabFile.getAbsolutePath() );
 			System.exit( 1 );
 		}
 
-		if( !targetsFile.exists() ) {
-			System.err.println( "Could not find targets file: " + targetsFile.getAbsolutePath() );
-			System.exit( 1 );
-		}
-
-		if( !fastaFile.exists() ) {
-			System.err.println( "Could not find Fasta file: " + fastaFile.getAbsolutePath() );
+		if( !configFile.exists() ) {
+			System.err.println( "Could not find mztab file: " + configFile.getAbsolutePath() );
 			System.exit( 1 );
 		}
 
@@ -86,13 +78,13 @@ public class MainProgram implements Runnable {
 
 		ConversionParameters cp = new ConversionParameters();
 		cp.setConversionProgramInfo( cpi );
-		cp.setFastaFile( fastaFile );
-		cp.setTargetsFile( targetsFile );
-		cp.setLogFile(logFile);
+		cp.setConfigFile( configFile );
+		cp.setMztabFile( mztabFile );
+		cp.setLogFile( getLogFile( mztabFile ));
 		cp.setLimelightXMLOutputFile( outFile );
 
 		try {
-			ConverterRunner.createInstance().convertCongaTSVToLimelightXML(cp);
+			ConverterRunner.createInstance().convertToLimelightXML(cp);
 		} catch(Throwable t) {
 
 			System.err.println("Error running conversion: " + t.getMessage());
@@ -114,6 +106,30 @@ public class MainProgram implements Runnable {
 		mp.args = args;
 
 		CommandLine.run(mp, args);
+	}
+
+	/**
+	 * Get the log file corresponding to the given mztab file.
+	 *
+	 * @param mzTabFile
+	 * @return The log file, null if none is found
+	 */
+	private File getLogFile(File mzTabFile) {
+
+		if (!mzTabFile.isFile()) {
+			throw new IllegalArgumentException("The provided File object is not a file.");
+		}
+
+		File parentDirectory = mzTabFile.getParentFile();
+		String baseName = mzTabFile.getName().substring(0, mzTabFile.getName().lastIndexOf('.'));
+		String logFileName = baseName + ".log";
+		File logFile = new File(parentDirectory, logFileName);
+
+		if (logFile.exists() && logFile.isFile()) {
+			return logFile;
+		} else {
+			return null;
+		}
 	}
 
 

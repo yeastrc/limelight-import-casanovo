@@ -13,15 +13,8 @@ public class PSMAnnotationTypeSortOrder {
 
 		{
 			SearchAnnotation annotation = new SearchAnnotation();
-			annotation.setAnnotationName( PSMAnnotationTypes.CONGA_SCORE );
-			annotation.setSearchProgram( Constants.PROGRAM_NAME_CONGA );
-			annotations.add( annotation );
-		}
-
-		{
-			SearchAnnotation annotation = new SearchAnnotation();
-			annotation.setAnnotationName( PSMAnnotationTypes.CONGA_PEPTIDE_RANK );
-			annotation.setSearchProgram( Constants.PROGRAM_NAME_CONGA );
+			annotation.setAnnotationName( PSMAnnotationTypes.CASANOVO_SCORE );
+			annotation.setSearchProgram( Constants.PROGRAM_NAME_CASANOVO );
 			annotations.add( annotation );
 		}
 		

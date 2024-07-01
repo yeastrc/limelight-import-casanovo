@@ -19,10 +19,10 @@
 package org.yeastrc.limelight.xml.casanovo.reader;
 
 import org.apache.commons.io.FilenameUtils;
-import org.yeastrc.limelight.xml.casanovo.objects.CongaPSM;
-import org.yeastrc.limelight.xml.casanovo.objects.CongaReportedPeptide;
-import org.yeastrc.limelight.xml.casanovo.objects.CongaResults;
-import org.yeastrc.limelight.xml.casanovo.objects.OpenModification;
+import org.yeastrc.limelight.xml.casanovo.objects.CasanovoPSM;
+import org.yeastrc.limelight.xml.casanovo.objects.CasanovoReportedPeptide;
+import org.yeastrc.limelight.xml.casanovo.objects.CasanovoResults;
+import org.yeastrc.limelight.xml.casanovo.objects.ConversionParameters;
 import org.yeastrc.limelight.xml.casanovo.utils.CompareUtils;
 import org.yeastrc.limelight.xml.casanovo.utils.ReportedPeptideUtils;
 
@@ -40,25 +40,44 @@ import java.util.regex.Pattern;
  */
 public class ResultsParser {
 
-	public static CongaResults getResults(File targetsFile, Map<String, BigDecimal> staticMods) throws Throwable {
+	public static CasanovoResults getResults(File targetsFile, ConfigParser configParser) throws Throwable {
 
-		CongaResults results = new CongaResults();
-		Map<CongaReportedPeptide,Collection<CongaPSM>> resultMap = new HashMap<>();
+		CasanovoResults results = new CasanovoResults();
+		Map<CasanovoReportedPeptide,Collection<CasanovoPSM>> resultMap = new HashMap<>();
 		results.setPeptidePSMMap(resultMap);
 
 		try(BufferedReader br = new BufferedReader(new FileReader( targetsFile ))) {
 
-			String headerLine = br.readLine();
-			Map<String, Integer> columnMap = processHeaderLine(headerLine);
+			Map<String, Integer> columnMap = null;
+
+			final String[] requiredHeaders = new String[] {
+					"sequence",
+					"spectra_ref",
+					"search_engine_score[1]",
+					"charge",
+					"exp_mass_to_charge"
+			};
 
 			for(String line = br.readLine(); line != null; line = br.readLine()) {
-				CongaPSM psm = getPSMFromLine(line, columnMap, staticMods);
-				CongaReportedPeptide reportedPeptide = ReportedPeptideUtils.getReportedPeptideForPSM( psm );
 
-				if( !results.getPeptidePSMMap().containsKey( reportedPeptide ) )
-					results.getPeptidePSMMap().put( reportedPeptide, new ArrayList<>() );
+				if(line.startsWith("PSH")) {
+					columnMap = processHeaderLine(line);
 
-				results.getPeptidePSMMap().get( reportedPeptide ).add(psm);
+					for(String requiredHeader : requiredHeaders) {
+						if(!columnMap.containsKey(requiredHeader)) {
+							throw new RuntimeException("Could not find column for \"" + requiredHeader + "\"");
+						}
+					}
+
+				} else if(line.startsWith("PSM")) {
+					CasanovoPSM psm = getPSMFromLine(line, columnMap, configParser);
+					CasanovoReportedPeptide reportedPeptide = ReportedPeptideUtils.getReportedPeptideForPSM( psm );
+
+					if( !results.getPeptidePSMMap().containsKey( reportedPeptide ) )
+						results.getPeptidePSMMap().put( reportedPeptide, new ArrayList<>() );
+
+					results.getPeptidePSMMap().get( reportedPeptide ).add(psm);
+				}
 			}
 		}
 
@@ -83,161 +102,63 @@ public class ResultsParser {
 	}
 
 	/**
+	 * Get the scan number from the spectra_ref field
+	 *
+	 * @param spectraRef
+	 * @return
+	 * @throws Exception
+	 */
+	private static int getScanNumberFromSpectraRef(String spectraRef) throws Exception {
+		String[] fields = spectraRef.split(":");
+		if(fields.length != 2) { throw new Exception("Unexpected format for spectra_ref"); }
+		fields = fields[1].split("=");
+		if(fields.length != 2) { throw new Exception("Unexpected format for spectra_ref"); }
+		if(!fields[0].equals("scan")) { throw new Exception("Unexpected format for spectra_ref"); }
+		return Integer.parseInt(fields[1]);
+	}
+
+	public static byte parseDecimalStringToByte(String decimalString) {
+		BigDecimal decimal = new BigDecimal(decimalString);
+		BigDecimal rounded = decimal.setScale(0, BigDecimal.ROUND_FLOOR);
+		return rounded.byteValueExact();
+	}
+
+	/**
 	 *
 	 * @param line
 	 * @param columnMap
 	 * @return
 	 * @throws Exception
 	 */
-	private static CongaPSM getPSMFromLine(String line, Map<String, Integer> columnMap, Map<String, BigDecimal> staticMods) throws Exception {
+	private static CasanovoPSM getPSMFromLine(String line, Map<String, Integer> columnMap, ConfigParser configParser) throws Exception {
 
 		String[] fields = line.split("\\t", -1);
 
-		final String[] requiredHeaders = new String[] {
-				"scan",
-				"charge",
-				"score",
-				"delta_mass",
-				"rank",
-				"search_file",
-				"peptide",
-				"spectrum_neutral_mass",
-				"modification_info",
-				"originally_discovered",
-				"above_group_threshold"
-		};
+		final String reportedPeptideString = fields[columnMap.get("sequence")];
+		final String spectraRef = fields[columnMap.get("spectra_ref")];
+		final String chargeString = fields[columnMap.get("charge")];
+		final BigDecimal score = new BigDecimal(fields[columnMap.get("search_engine_score[1]")]);
+		final BigDecimal precursorMZ = new BigDecimal(fields[columnMap.get("exp_mass_to_charge")]);
 
-		for(String requiredHeader : requiredHeaders) {
-			if(!columnMap.containsKey(requiredHeader)) {
-				throw new RuntimeException("Could not find column for \"" + requiredHeader + "\"");
-			}
-		}
+		int scanNumber = getScanNumberFromSpectraRef(spectraRef);
+		byte charge = parseDecimalStringToByte(chargeString);
 
-		final int scanNumber = Integer.parseInt(fields[columnMap.get("scan")]);
-		final byte charge = Byte.parseByte(fields[columnMap.get("charge")]);
-		final BigDecimal score = new BigDecimal(fields[columnMap.get("score")]);
-		final Integer rank = Math.round(Float.valueOf(fields[columnMap.get("rank")]));
-		final String searchFile = fields[columnMap.get("search_file")];
-		final String reportedPeptideString = fields[columnMap.get("peptide")];
-		final BigDecimal deltaMass = new BigDecimal(fields[columnMap.get("delta_mass")]);
-		final BigDecimal observedNeutralMass = new BigDecimal(fields[columnMap.get("spectrum_neutral_mass")]);
-		final String modificationInfoString = fields[columnMap.get("modification_info")];
-		final boolean aboveGroupThreshold = fields[columnMap.get("above_group_threshold")].equals("True");
-		final boolean originallyDiscovered = fields[columnMap.get("originally_discovered")].equals("True");
-
-		String scan_file = null;
-		if(columnMap.containsKey("file")) {
-			scan_file = fields[columnMap.get("file")];
-			scan_file = FilenameUtils.removeExtension(scan_file);
-		}
-
-		CongaPSM psm = new CongaPSM();
+		CasanovoPSM psm = new CasanovoPSM();
 
 		psm.setScanNumber(scanNumber);
 		psm.setCharge(charge);
 		psm.setScore(score);
-		psm.setSearchFile(searchFile);
-		psm.setPeptideRank(rank);
-		psm.setObservedNeutralMass(observedNeutralMass);
-		psm.setScan_filename(scan_file);
-		psm.setAboveGroupThreshold(aboveGroupThreshold);
-		psm.setOriginallyDiscovered(originallyDiscovered);
+		psm.setPrecursorMZ(precursorMZ);
 
 		String nakedPeptideSequence = getPeptideSequenceFromReportedPeptideString(reportedPeptideString);
-
-		assignOpenModAndDeltaMassToPSM(psm, nakedPeptideSequence, deltaMass, searchFile, fields, columnMap);
 
 		// handle peptide string
 		psm.setPeptideSequence(nakedPeptideSequence);
 
 		// handle var mods
-		psm.setMods(getVariableModsFromReportedMods(modificationInfoString, psm.getPeptideSequence(), staticMods));
+		psm.setMods(getVariableModsFromReportedMods(reportedPeptideString, configParser.getResidues()));
 
 		return psm;
-	}
-
-	/**
-	 * Perform in-place modification of the supplied PSM: set deltaMass and open modification
-	 *
-	 * @param psm
-	 * @param deltaMass
-	 * @param searchFile
-	 * @param fields
-	 * @param columnMap
-	 */
-	private static void assignOpenModAndDeltaMassToPSM(
-			CongaPSM psm,
-			String nakedPeptideSequence,
-			BigDecimal deltaMass,
-			String searchFile,
-			String fields[],
-			Map<String, Integer> columnMap
-	) {
-
-		if(searchFile.equals("narrow")) {
-			psm.setDeltaMass(deltaMass);
-
-		} else if(searchFile.equals("open")) {
-
-			if(columnMap.containsKey("open_mod_localization")) {
-
-				// aScore localization was performed
-
-				// ensure all required columns are present
-				final String[] requiredHeaders = new String[] {
-						"open_mod_localization",
-						"dm_used",
-						"localized_better",
-				};
-
-				for(String requiredHeader : requiredHeaders) {
-					if(!columnMap.containsKey(requiredHeader)) {
-						throw new RuntimeException("Could not find column for \"" + requiredHeader + "\"");
-					}
-				}
-
-				final String localizedString = fields[columnMap.get("open_mod_localization")];
-				final boolean localizedBetter = fields[columnMap.get("localized_better")].equals("True");
-				final boolean deltaMassUsed = fields[columnMap.get("dm_used")].equals("True");
-
-				if(localizedBetter) {
-
-					// localized version scored better, add position to localization and adjust delta mass as necessary
-					AbstractMap.SimpleEntry<Integer, BigDecimal> modPair = getModFromReportedMod(
-							localizedString,
-							nakedPeptideSequence,
-							null
-					);
-
-					Integer modPosition = modPair.getKey();;
-					BigDecimal modMass = modPair.getValue();
-
-					// set the open mod mass and delta mass
-					if(deltaMassUsed) {
-						psm.setOpenModification(new OpenModification(deltaMass, modPosition));
-						psm.setDeltaMass(BigDecimal.ZERO);
-					} else {
-						psm.setOpenModification( new OpenModification(modMass, modPosition));
-						psm.setDeltaMass(deltaMass.subtract(modMass));
-					}
-
-				} else {
-
-					// use the non-localized version since it scored better
-					psm.setOpenModification( new OpenModification(deltaMass, null));
-					psm.setDeltaMass(BigDecimal.ZERO);
-				}
-
-			} else {
-
-				// aScore localization wasn't performed
-				psm.setOpenModification( new OpenModification(deltaMass, null));
-				psm.setDeltaMass(BigDecimal.ZERO);
-			}
-		} else {
-			throw new RuntimeException("\"search_file\" must be \"narrow\" or \"open\"");
-		}
-
 	}
 
 	/**
@@ -249,90 +170,54 @@ public class ResultsParser {
 		return reportedPeptideString.toUpperCase().replaceAll("[^A-Z]", "");
 	}
 
-	private static Map<Integer, BigDecimal> getVariableModsFromReportedMods(String reportedMods,String nakedPeptideSequence, Map<String, BigDecimal> staticMods) {
-		Map<Integer, BigDecimal> mods = new HashMap<>();
+	private static Map<Integer, BigDecimal> getVariableModsFromReportedMods(String reportedPeptideString, Map<String, BigDecimal> residuesMap) throws Exception {
+		Map<Integer, BigDecimal> variableMods = new HashMap<>();
 
-		// no mods!
-		if(reportedMods.length() < 1) { return mods; }
+		// Pattern for N-terminal modifications
+		Pattern nTermPattern = Pattern.compile("^([+-][0-9.]+)(.*)");
+		Matcher nTermMatcher = nTermPattern.matcher(reportedPeptideString);
 
-		for(String reportedMod : reportedMods.split(",")) {
-			AbstractMap.SimpleEntry<Integer, BigDecimal> modPair = getModFromReportedMod(
-					reportedMod,
-					nakedPeptideSequence,
-					staticMods
-			);
-
-			if(modPair != null) {
-				mods.put(modPair.getKey(), modPair.getValue());
+		if (nTermMatcher.find()) {
+			String nTermMod = nTermMatcher.group(1);
+			if (!residuesMap.containsKey(nTermMod)) {
+				throw new Exception("N-terminal modification " + nTermMod + " not found in residues map");
 			}
+			variableMods.put(0, residuesMap.get(nTermMod));
+			reportedPeptideString = nTermMatcher.group(2);
 		}
 
-		return mods;
-	}
+		// Pattern for internal modifications, including those to be ignored
+		Pattern internalPattern = Pattern.compile("([A-Z])([+-][0-9.]+)");
+		Matcher internalMatcher = internalPattern.matcher(reportedPeptideString);
 
-	private static AbstractMap.SimpleEntry<Integer, BigDecimal> getModFromReportedMod(String reportedModString, String nakedPeptideSequence, Map<String, BigDecimal> staticMods) {
-		Pattern p = Pattern.compile("(\\d+)\\[(.+)\\]");
-		Matcher m = p.matcher(reportedModString);
+		int position = 1;
+		while (internalMatcher.find()) {
+			String residue = internalMatcher.group(1);
+			String modification = internalMatcher.group(2);
+			String fullMod = residue + modification;
 
-		if(m.matches()) {
-			int position = Integer.parseInt(m.group(1));
-
-			// ensure we have a valid position for the mod
-			if(position > nakedPeptideSequence.length()) {
-				throw new RuntimeException("Got a mod position past the c-terminus of protein. Mod: " + reportedModString + "  Peptide: " + nakedPeptideSequence);
-			} else if(position < 0) {
-				throw new RuntimeException("Got a mod position preceding the n-terminus of protein. Mod: " + reportedModString + "  Peptide: " + nakedPeptideSequence);
+			// Ignore C+57.021
+			if (fullMod.equals("C+57.021")) {
+				position += internalMatcher.start() + 1;
+				continue;
 			}
 
-			Collection<BigDecimal> masses = new ArrayList<>();
-
-			// mod masses are reported comma-delimited if there are more than one on this position
-			for(String modMass : m.group(2).split(",")) {
-				BigDecimal bdModMass = new BigDecimal(modMass);
-
-				if(!isStaticMod(nakedPeptideSequence, position, bdModMass, staticMods)) {
-					masses.add(new BigDecimal(modMass));
-				}
+			if (!residuesMap.containsKey(fullMod)) {
+				throw new Exception("Modification " + fullMod + " not found in residues map");
+			}
+			if (!residuesMap.containsKey(residue)) {
+				throw new Exception("Residue " + residue + " not found in residues map");
 			}
 
-			// is a static mod, return null
-			if(masses.size() < 1) { return null; }
+			BigDecimal modMass = residuesMap.get(fullMod).subtract(residuesMap.get(residue));
+			variableMods.put(position, modMass);
 
-			BigDecimal finalModMass = getBigDecimalCollectionSum(masses);
-			return new AbstractMap.SimpleEntry<>(position, finalModMass);
+			position += internalMatcher.start() + 1;
+			reportedPeptideString = reportedPeptideString.substring(internalMatcher.end());
+			internalMatcher = internalPattern.matcher(reportedPeptideString);
 		}
 
-		throw new RuntimeException("Could not parse reported mod: " + reportedModString);
+		return variableMods;
 	}
 
-	private static BigDecimal getBigDecimalCollectionSum(Collection<BigDecimal> bigDecimalCollection) {
-		BigDecimal sum = null;
-
-		for(BigDecimal bd : bigDecimalCollection) {
-			if(sum == null) { sum = bd; }
-			else {
-				sum = sum.add(bd);
-			}
-		}
-
-		return sum;
-	}
-
-	/**
-	 * Return true if the supplied mod information corresponds to a known static mod
-	 * @param nakedPeptideString
-	 * @param position
-	 * @param mass
-	 * @param staticMods
-	 * @return
-	 */
-	private static boolean isStaticMod(String nakedPeptideString, int position, BigDecimal mass, Map<String, BigDecimal> staticMods) {
-
-		if(staticMods == null || staticMods.size() < 1) { return false; }
-
-		String residue = nakedPeptideString.substring(position - 1, position);
-		if(!staticMods.containsKey(residue)) { return false; }
-
-		return CompareUtils.sameScaleEquals(mass, staticMods.get(residue));
-	}
 }

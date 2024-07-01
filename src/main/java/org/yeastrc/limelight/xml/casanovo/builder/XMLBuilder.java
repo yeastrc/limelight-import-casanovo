@@ -20,14 +20,13 @@ import java.util.Map;
 public class XMLBuilder {
 
 	public void buildAndSaveXML( ConversionParameters conversionParameters,
-								 LogFileData logFileData,
-								 Map<String, BigDecimal> staticMods,
-			                     CongaResults congaResults)
+								 SearchMetadata searchMetadata,
+			                     CasanovoResults congaResults)
     throws Exception {
 
 		LimelightInput limelightInputRoot = new LimelightInput();
 
-		limelightInputRoot.setFastaFilename( conversionParameters.getFastaFile().getName() );
+		limelightInputRoot.setFastaFilename( "none" );
 		
 		// add in the conversion program (this program) information
 		ConversionProgramBuilder.createInstance().buildConversionProgramSection( limelightInputRoot, conversionParameters);
@@ -42,9 +41,9 @@ public class XMLBuilder {
 			SearchProgram searchProgram = new SearchProgram();
 			searchPrograms.getSearchProgram().add( searchProgram );
 
-			searchProgram.setName( Constants.PROGRAM_NAME_CONGA);
-			searchProgram.setDisplayName( Constants.PROGRAM_NAME_CONGA );
-			searchProgram.setVersion(logFileData.getVersion() );
+			searchProgram.setName( Constants.PROGRAM_NAME_CASANOVO);
+			searchProgram.setDisplayName( Constants.PROGRAM_NAME_CASANOVO );
+			searchProgram.setVersion(searchMetadata.getCasanovoVersion() );
 
 			//
 			// Define the annotation types present in magnum data
@@ -97,18 +96,15 @@ public class XMLBuilder {
 		//
 		// Define the static mods
 		//
-		if(staticMods.size() > 0) {
 
-			StaticModifications smods = new StaticModifications();
-			limelightInputRoot.setStaticModifications( smods );
+		// Assume casanovo always has +57.021464 on C
+		StaticModifications smods = new StaticModifications();
+		limelightInputRoot.setStaticModifications( smods );
 
-			for(String residue : staticMods.keySet()) {
-				StaticModification xmlSmod = new StaticModification();
-				xmlSmod.setAminoAcid(residue);
-				xmlSmod.setMassChange(staticMods.get(residue));
-				smods.getStaticModification().add(xmlSmod);
-			}
-		}
+		StaticModification xmlSmod = new StaticModification();
+		xmlSmod.setAminoAcid("C");
+		xmlSmod.setMassChange(new BigDecimal("57.021464"));
+		smods.getStaticModification().add(xmlSmod);
 
 		//
 		// Define the peptide and PSM data
@@ -117,7 +113,7 @@ public class XMLBuilder {
 		limelightInputRoot.setReportedPeptides( reportedPeptides );
 		
 		// iterate over each distinct reported peptide
-		for( CongaReportedPeptide congaReportedPeptide : congaResults.getPeptidePSMMap().keySet() ) {
+		for( CasanovoReportedPeptide congaReportedPeptide : congaResults.getPeptidePSMMap().keySet() ) {
 
 			ReportedPeptide xmlReportedPeptide = new ReportedPeptide();
 			reportedPeptides.getReportedPeptide().add( xmlReportedPeptide );
@@ -160,17 +156,15 @@ public class XMLBuilder {
 
 			// iterate over all PSMs for this reported peptide
 
-			for( CongaPSM psm : congaResults.getPeptidePSMMap().get(congaReportedPeptide)) {
+			for( CasanovoPSM psm : congaResults.getPeptidePSMMap().get(congaReportedPeptide)) {
 
 				Psm xmlPsm = new Psm();
 				xmlPsms.getPsm().add( xmlPsm );
 
 				xmlPsm.setScanNumber( new BigInteger( String.valueOf( psm.getScanNumber() ) ) );
 				xmlPsm.setPrecursorCharge( new BigInteger( String.valueOf( psm.getCharge() ) ) );
-				if(psm.getScan_filename() != null) {
-					xmlPsm.setScanFileName(psm.getScan_filename());
-				}
-				//xmlPsm.setPrecursorMZ(MassUtils.getMoverZ(psm));
+				xmlPsm.setScanFileName(searchMetadata.getScanFileName());
+				xmlPsm.setPrecursorMZ(psm.getPrecursorMZ());
 
 				// add in the filterable PSM annotations (e.g., score)
 				FilterablePsmAnnotations xmlFilterablePsmAnnotations = new FilterablePsmAnnotations();
@@ -180,78 +174,9 @@ public class XMLBuilder {
 					FilterablePsmAnnotation xmlFilterablePsmAnnotation = new FilterablePsmAnnotation();
 					xmlFilterablePsmAnnotations.getFilterablePsmAnnotation().add( xmlFilterablePsmAnnotation );
 
-					xmlFilterablePsmAnnotation.setAnnotationName( PSMAnnotationTypes.CONGA_SCORE );
-					xmlFilterablePsmAnnotation.setSearchProgram( Constants.PROGRAM_NAME_CONGA );
-
+					xmlFilterablePsmAnnotation.setAnnotationName( PSMAnnotationTypes.CASANOVO_SCORE );
+					xmlFilterablePsmAnnotation.setSearchProgram( Constants.PROGRAM_NAME_CASANOVO );
 					xmlFilterablePsmAnnotation.setValue( psm.getScore() );
-				}
-
-				{
-					FilterablePsmAnnotation xmlFilterablePsmAnnotation = new FilterablePsmAnnotation();
-					xmlFilterablePsmAnnotations.getFilterablePsmAnnotation().add( xmlFilterablePsmAnnotation );
-
-					xmlFilterablePsmAnnotation.setAnnotationName( PSMAnnotationTypes.CONGA_PEPTIDE_RANK );
-					xmlFilterablePsmAnnotation.setSearchProgram( Constants.PROGRAM_NAME_CONGA );
-
-					xmlFilterablePsmAnnotation.setValue( BigDecimal.valueOf(psm.getPeptideRank()).setScale(0, RoundingMode.HALF_UP) );
-				}
-
-				{
-					FilterablePsmAnnotation xmlFilterablePsmAnnotation = new FilterablePsmAnnotation();
-					xmlFilterablePsmAnnotations.getFilterablePsmAnnotation().add( xmlFilterablePsmAnnotation );
-
-					xmlFilterablePsmAnnotation.setAnnotationName( PSMAnnotationTypes.CONGA_DELTA_MASS );
-					xmlFilterablePsmAnnotation.setSearchProgram( Constants.PROGRAM_NAME_CONGA );
-
-					xmlFilterablePsmAnnotation.setValue( psm.getDeltaMass() );
-				}
-
-				{
-					FilterablePsmAnnotation xmlFilterablePsmAnnotation = new FilterablePsmAnnotation();
-					xmlFilterablePsmAnnotations.getFilterablePsmAnnotation().add( xmlFilterablePsmAnnotation );
-
-					xmlFilterablePsmAnnotation.setAnnotationName( PSMAnnotationTypes.CONGA_ORIGINALLY_DISCOVERED );
-					xmlFilterablePsmAnnotation.setSearchProgram( Constants.PROGRAM_NAME_CONGA );
-
-					xmlFilterablePsmAnnotation.setValue( psm.isOriginallyDiscovered() ? BigDecimal.ONE : BigDecimal.ZERO );
-				}
-
-				{
-					FilterablePsmAnnotation xmlFilterablePsmAnnotation = new FilterablePsmAnnotation();
-					xmlFilterablePsmAnnotations.getFilterablePsmAnnotation().add( xmlFilterablePsmAnnotation );
-
-					xmlFilterablePsmAnnotation.setAnnotationName( PSMAnnotationTypes.CONGA_ABOVE_GROUP_THRESHOLD );
-					xmlFilterablePsmAnnotation.setSearchProgram( Constants.PROGRAM_NAME_CONGA );
-
-					xmlFilterablePsmAnnotation.setValue( psm.isAboveGroupThreshold() ? BigDecimal.ONE : BigDecimal.ZERO );
-				}
-
-				// add in the descriptive PSM annotations (e.g., "open" vs/ "narrow")
-				DescriptivePsmAnnotations xmlDescriptiveAnnotations = new DescriptivePsmAnnotations();
-				xmlPsm.setDescriptivePsmAnnotations( xmlDescriptiveAnnotations );
-				{
-					DescriptivePsmAnnotation xmlDescriptivePsmAnnotation = new DescriptivePsmAnnotation();
-					xmlDescriptiveAnnotations.getDescriptivePsmAnnotation().add( xmlDescriptivePsmAnnotation );
-
-					xmlDescriptivePsmAnnotation.setAnnotationName( PSMAnnotationTypes.CONGA_SEARCH_FILE );
-					xmlDescriptivePsmAnnotation.setSearchProgram( Constants.PROGRAM_NAME_CONGA );
-
-					xmlDescriptivePsmAnnotation.setValue( psm.getSearchFile() );
-				}
-
-
-
-				// add in the open mod mass if this is an open mod search
-				if(psm.getOpenModification() != null) {
-					PsmOpenModification xmlPsmOpenMod = new PsmOpenModification();
-					xmlPsmOpenMod.setMass(psm.getOpenModification().getMass());
-					xmlPsm.setPsmOpenModification(xmlPsmOpenMod);
-
-					if(psm.getOpenModification().getPosition() != null) {
-						PsmOpenModificationPosition xmlPsmOpenModPosition = new PsmOpenModificationPosition();
-						xmlPsmOpenModPosition.setPosition(BigInteger.valueOf(psm.getOpenModification().getPosition()));
-						xmlPsmOpenMod.getPsmOpenModificationPosition().add(xmlPsmOpenModPosition);
-					}
 				}
 				
 				
@@ -271,12 +196,23 @@ public class XMLBuilder {
 		ConfigurationFiles xmlConfigurationFiles = new ConfigurationFiles();
 		limelightInputRoot.setConfigurationFiles( xmlConfigurationFiles );
 
-		ConfigurationFile xmlConfigurationFile = new ConfigurationFile();
-		xmlConfigurationFiles.getConfigurationFile().add( xmlConfigurationFile );
+		{
+			ConfigurationFile xmlConfigurationFile = new ConfigurationFile();
+			xmlConfigurationFiles.getConfigurationFile().add(xmlConfigurationFile);
 
-		xmlConfigurationFile.setSearchProgram( Constants.PROGRAM_NAME_CONGA );
-		xmlConfigurationFile.setFileName( conversionParameters.getLogFile().getName() );
-		xmlConfigurationFile.setFileContent( Files.readAllBytes( FileSystems.getDefault().getPath( conversionParameters.getLogFile().getAbsolutePath() ) ) );
+			xmlConfigurationFile.setSearchProgram(Constants.PROGRAM_NAME_CASANOVO);
+			xmlConfigurationFile.setFileName(conversionParameters.getLogFile().getName());
+			xmlConfigurationFile.setFileContent(Files.readAllBytes(FileSystems.getDefault().getPath(conversionParameters.getConfigFile().getAbsolutePath())));
+		}
+
+		if(conversionParameters.getLogFile() != null) {
+			ConfigurationFile xmlConfigurationFile = new ConfigurationFile();
+			xmlConfigurationFiles.getConfigurationFile().add(xmlConfigurationFile);
+
+			xmlConfigurationFile.setSearchProgram(Constants.PROGRAM_NAME_CASANOVO);
+			xmlConfigurationFile.setFileName(conversionParameters.getLogFile().getName());
+			xmlConfigurationFile.setFileContent(Files.readAllBytes(FileSystems.getDefault().getPath(conversionParameters.getLogFile().getAbsolutePath())));
+		}
 
 		//make the xml file
 		CreateImportFileFromJavaObjectsMain.getInstance().createImportFileFromJavaObjectsMain( conversionParameters.getLimelightXMLOutputFile(), limelightInputRoot);

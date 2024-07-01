@@ -19,15 +19,12 @@
 package org.yeastrc.limelight.xml.casanovo.main;
 
 import org.yeastrc.limelight.xml.casanovo.builder.XMLBuilder;
-import org.yeastrc.limelight.xml.casanovo.objects.CongaResults;
+import org.yeastrc.limelight.xml.casanovo.objects.CasanovoResults;
 import org.yeastrc.limelight.xml.casanovo.objects.ConversionParameters;
-import org.yeastrc.limelight.xml.casanovo.objects.LogFileData;
-import org.yeastrc.limelight.xml.casanovo.reader.LogFileParser;
+import org.yeastrc.limelight.xml.casanovo.reader.ConfigParser;
 import org.yeastrc.limelight.xml.casanovo.reader.ResultsParser;
-import org.yeastrc.limelight.xml.casanovo.utils.ModParsingUtils;
-
-import java.math.BigDecimal;
-import java.util.Map;
+import org.yeastrc.limelight.xml.casanovo.objects.SearchMetadata;
+import org.yeastrc.limelight.xml.casanovo.reader.SearchMetadataParser;
 
 public class ConverterRunner {
 
@@ -35,19 +32,22 @@ public class ConverterRunner {
 	public static ConverterRunner createInstance() { return new ConverterRunner(); }
 	
 	
-	public void convertCongaTSVToLimelightXML(ConversionParameters conversionParameters ) throws Throwable {
+	public void convertToLimelightXML(ConversionParameters conversionParameters ) throws Throwable {
 
-		System.err.print( "Reading log file (" + conversionParameters.getLogFile().getName() + ")..." );
-		LogFileData logFileData = LogFileParser.parseLogFile(conversionParameters.getLogFile());
-		Map<String, BigDecimal> staticMods = ModParsingUtils.getStaticMods(logFileData.getStaticModsString());
+		System.err.print( "Reading config file (" + conversionParameters.getConfigFile().getName() + ")..." );
+		ConfigParser configParser = new ConfigParser(conversionParameters.getConfigFile().getAbsolutePath());
 		System.err.println( " Done." );
 
-		System.err.print( "Reading search results (" + conversionParameters.getTargetsFile().getName() + ") into memory..." );
-		CongaResults congaResults = ResultsParser.getResults(conversionParameters.getTargetsFile(), staticMods);
+		System.err.print( "Reading metadata from mztab (" + conversionParameters.getMztabFile().getName() + ")..." );
+		SearchMetadata searchMetadata = (new SearchMetadataParser()).parse(conversionParameters.getMztabFile().getAbsolutePath());
+		System.err.println( " Done." );
+
+		System.err.print( "Reading search results (" + conversionParameters.getMztabFile().getName() + ") into memory..." );
+		CasanovoResults casanovoResults = ResultsParser.getResults(conversionParameters.getMztabFile(), configParser);
 		System.err.println( " Done." );
 
 		System.err.print( "Writing out XML..." );
-		(new XMLBuilder()).buildAndSaveXML( conversionParameters, logFileData, staticMods, congaResults );
+		(new XMLBuilder()).buildAndSaveXML( conversionParameters, searchMetadata, casanovoResults);
 		System.err.println( " Done." );
 
 		System.err.print( "Validating Limelight XML..." );

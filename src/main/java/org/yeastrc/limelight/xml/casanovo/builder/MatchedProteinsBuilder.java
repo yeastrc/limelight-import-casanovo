@@ -4,7 +4,7 @@ import org.yeastrc.limelight.limelight_import.api.xml_dto.LimelightInput;
 import org.yeastrc.limelight.limelight_import.api.xml_dto.MatchedProtein;
 import org.yeastrc.limelight.limelight_import.api.xml_dto.MatchedProteinLabel;
 import org.yeastrc.limelight.limelight_import.api.xml_dto.MatchedProteins;
-import org.yeastrc.limelight.xml.casanovo.objects.CongaReportedPeptide;
+import org.yeastrc.limelight.xml.casanovo.objects.CasanovoReportedPeptide;
 import org.yeastrc.proteomics.fasta.FASTAEntry;
 import org.yeastrc.proteomics.fasta.FASTAFileParser;
 import org.yeastrc.proteomics.fasta.FASTAFileParserFactory;
@@ -40,7 +40,7 @@ public class MatchedProteinsBuilder {
 	 * @param reportedPeptides
 	 * @throws Exception
 	 */
-	public void buildMatchedProteins( LimelightInput limelightInputRoot, File fastaFile, Collection<CongaReportedPeptide> reportedPeptides ) throws Exception {
+	public void buildMatchedProteins( LimelightInput limelightInputRoot, File fastaFile, Collection<CasanovoReportedPeptide> reportedPeptides ) throws Exception {
 
 		System.err.print( " Matching peptides to proteins..." );
 
@@ -56,11 +56,11 @@ public class MatchedProteinsBuilder {
 	}
 
 
-	private Collection<PeptideObject> getNakedPeptideObjectsForReportedPeptides( Collection<CongaReportedPeptide> peptides ) {
+	private Collection<PeptideObject> getNakedPeptideObjectsForReportedPeptides( Collection<CasanovoReportedPeptide> peptides ) {
 
 		Collection<PeptideObject> nakedPeptideObjects = new HashSet<>();
 
-		for( CongaReportedPeptide reportedPeptide : peptides ) {
+		for( CasanovoReportedPeptide reportedPeptide : peptides ) {
 
 			PeptideObject nakedPeptideObject = new PeptideObject();
 			nakedPeptideObject.setFoundMatchingProtein( false );

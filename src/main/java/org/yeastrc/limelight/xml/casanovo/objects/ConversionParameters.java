@@ -22,14 +22,6 @@ import java.io.File;
 
 public class ConversionParameters {
 
-	public File getFastaFile() {
-		return fastaFile;
-	}
-
-	public void setFastaFile(File fastaFile) {
-		this.fastaFile = fastaFile;
-	}
-
 	public File getLimelightXMLOutputFile() {
 		return limelightXMLOutputFile;
 	}
@@ -46,12 +38,12 @@ public class ConversionParameters {
 		this.conversionProgramInfo = conversionProgramInfo;
 	}
 
-	public File getTargetsFile() {
-		return targetsFile;
+	public File getMztabFile() {
+		return mztabFile;
 	}
 
-	public void setTargetsFile(File targetsFile) {
-		this.targetsFile = targetsFile;
+	public void setMztabFile(File mztabFile) {
+		this.mztabFile = mztabFile;
 	}
 
 	public File getLogFile() {
@@ -62,9 +54,17 @@ public class ConversionParameters {
 		this.logFile = logFile;
 	}
 
-	private File fastaFile;
+	public File getConfigFile() {
+		return configFile;
+	}
+
+	public void setConfigFile(File configFile) {
+		this.configFile = configFile;
+	}
+
 	private File limelightXMLOutputFile;
 	private ConversionProgramInfo conversionProgramInfo;
-	private File targetsFile;
+	private File mztabFile;
+	private File configFile;
 	private File logFile;
 }

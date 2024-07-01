@@ -3,7 +3,7 @@ package org.yeastrc.limelight.xml.casanovo.objects;
 import java.math.BigDecimal;
 import java.util.Map;
 
-public class CongaReportedPeptide {
+public class CasanovoReportedPeptide {
 	
 	/* (non-Javadoc)
 	 * @see java.lang.Object#hashCode()
@@ -24,9 +24,9 @@ public class CongaReportedPeptide {
 			return true;
 		if (obj == null)
 			return false;
-		if (!(obj instanceof CongaReportedPeptide))
+		if (!(obj instanceof CasanovoReportedPeptide))
 			return false;
-		CongaReportedPeptide other = (CongaReportedPeptide) obj;
+		CasanovoReportedPeptide other = (CasanovoReportedPeptide) obj;
 		if (reportedPeptideString == null) {
 			if (other.reportedPeptideString != null)
 				return false;
