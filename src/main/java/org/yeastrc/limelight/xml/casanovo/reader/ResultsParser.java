@@ -18,18 +18,16 @@
 
 package org.yeastrc.limelight.xml.casanovo.reader;
 
-import org.apache.commons.io.FilenameUtils;
 import org.yeastrc.limelight.xml.casanovo.objects.CasanovoPSM;
 import org.yeastrc.limelight.xml.casanovo.objects.CasanovoReportedPeptide;
 import org.yeastrc.limelight.xml.casanovo.objects.CasanovoResults;
-import org.yeastrc.limelight.xml.casanovo.objects.ConversionParameters;
-import org.yeastrc.limelight.xml.casanovo.utils.CompareUtils;
 import org.yeastrc.limelight.xml.casanovo.utils.ReportedPeptideUtils;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -119,7 +117,7 @@ public class ResultsParser {
 
 	public static byte parseDecimalStringToByte(String decimalString) {
 		BigDecimal decimal = new BigDecimal(decimalString);
-		BigDecimal rounded = decimal.setScale(0, BigDecimal.ROUND_FLOOR);
+		BigDecimal rounded = decimal.setScale(0, RoundingMode.FLOOR);
 		return rounded.byteValueExact();
 	}
 
@@ -173,51 +171,72 @@ public class ResultsParser {
 	private static Map<Integer, BigDecimal> getVariableModsFromReportedMods(String reportedPeptideString, Map<String, BigDecimal> residuesMap) throws Exception {
 		Map<Integer, BigDecimal> variableMods = new HashMap<>();
 
-		// Pattern for N-terminal modifications
-		Pattern nTermPattern = Pattern.compile("^([+-][0-9.]+)(.*)");
-		Matcher nTermMatcher = nTermPattern.matcher(reportedPeptideString);
+		int position = 0;
+		StringBuilder currentMod = new StringBuilder();
+		char previousResidue = '\0';
+		boolean readingMod = false;
 
-		if (nTermMatcher.find()) {
-			String nTermMod = nTermMatcher.group(1);
-			if (!residuesMap.containsKey(nTermMod)) {
-				throw new Exception("N-terminal modification " + nTermMod + " not found in residues map");
+		for (int i = 0; i < reportedPeptideString.length(); i++) {
+			char c = reportedPeptideString.charAt(i);
+
+			if (Character.isLetter(c)) {
+				if (readingMod) {
+					// We've finished reading a modification
+
+					if(position != 0) {
+						processMod(variableMods, position, previousResidue + currentMod.toString(), residuesMap);
+					} else {
+						processMod(variableMods, position, currentMod.toString(), residuesMap);
+					}
+					currentMod.setLength(0);
+					readingMod = false;
+				}
+				previousResidue = c;
+				position++;
+			} else if (c == '+' || c == '-') {
+				readingMod = true;
+				currentMod.append(c);
+			} else if (Character.isDigit(c) || c == '.') {
+				if (readingMod) {
+					currentMod.append(c);
+				} else {
+					throw new Exception("Invalid mod format in peptide: " + reportedPeptideString);
+				}
 			}
-			variableMods.put(0, residuesMap.get(nTermMod));
-			reportedPeptideString = nTermMatcher.group(2);
 		}
 
-		// Pattern for internal modifications, including those to be ignored
-		Pattern internalPattern = Pattern.compile("([A-Z])([+-][0-9.]+)");
-		Matcher internalMatcher = internalPattern.matcher(reportedPeptideString);
+		// Check if there's a modification at the end of the string
+		if (readingMod) {
+			processMod(variableMods, position - 1, previousResidue + currentMod.toString(), residuesMap);
+		}
 
-		int position = 1;
-		while (internalMatcher.find()) {
-			String residue = internalMatcher.group(1);
-			String modification = internalMatcher.group(2);
-			String fullMod = residue + modification;
+		return variableMods;
+	}
 
-			// Ignore C+57.021
-			if (fullMod.equals("C+57.021")) {
-				position += internalMatcher.start() + 1;
-				continue;
-			}
+	private static void processMod(Map<Integer, BigDecimal> variableMods, int position, String fullMod, Map<String, BigDecimal> residuesMap) throws Exception {
+		if (fullMod.equals("C+57.021")) {
+			return; // Ignore this specific modification
+		}
 
+		if(position == 0) {
 			if (!residuesMap.containsKey(fullMod)) {
 				throw new Exception("Modification " + fullMod + " not found in residues map");
 			}
+
+			BigDecimal modMass = residuesMap.get(fullMod);
+			variableMods.put(position, modMass);
+		} else {
+			if (!residuesMap.containsKey(fullMod)) {
+				throw new Exception("Modification " + fullMod + " not found in residues map");
+			}
+
+			String residue = fullMod.substring(0, 1);
 			if (!residuesMap.containsKey(residue)) {
 				throw new Exception("Residue " + residue + " not found in residues map");
 			}
 
 			BigDecimal modMass = residuesMap.get(fullMod).subtract(residuesMap.get(residue));
 			variableMods.put(position, modMass);
-
-			position += internalMatcher.start() + 1;
-			reportedPeptideString = reportedPeptideString.substring(internalMatcher.end());
-			internalMatcher = internalPattern.matcher(reportedPeptideString);
 		}
-
-		return variableMods;
 	}
-
 }

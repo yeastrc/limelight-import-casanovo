@@ -59,12 +59,6 @@ public class XMLBuilder {
 				filterablePsmAnnotationTypes.getFilterablePsmAnnotationType().add( annoType );
 			}
 
-			DescriptivePsmAnnotationTypes descriptivePsmAnnotationTypes = new DescriptivePsmAnnotationTypes();
-			psmAnnotationTypes.setDescriptivePsmAnnotationTypes( descriptivePsmAnnotationTypes );
-
-			for( DescriptivePsmAnnotationType annoType : PSMAnnotationTypes.getDescriptivePsmAnnotationTypes() ) {
-				descriptivePsmAnnotationTypes.getDescriptivePsmAnnotationType().add( annoType );
-			}
 		}
 
 		
@@ -214,7 +208,7 @@ public class XMLBuilder {
 			xmlConfigurationFiles.getConfigurationFile().add(xmlConfigurationFile);
 
 			xmlConfigurationFile.setSearchProgram(Constants.PROGRAM_NAME_CASANOVO);
-			xmlConfigurationFile.setFileName(conversionParameters.getLogFile().getName());
+			xmlConfigurationFile.setFileName(conversionParameters.getConfigFile().getName());
 			xmlConfigurationFile.setFileContent(Files.readAllBytes(FileSystems.getDefault().getPath(conversionParameters.getConfigFile().getAbsolutePath())));
 		}
 
