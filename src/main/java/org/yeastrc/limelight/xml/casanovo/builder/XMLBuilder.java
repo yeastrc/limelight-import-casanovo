@@ -15,13 +15,14 @@ import java.math.BigInteger;
 import java.math.RoundingMode;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
+import java.util.HashMap;
 import java.util.Map;
 
 public class XMLBuilder {
 
 	public void buildAndSaveXML( ConversionParameters conversionParameters,
 								 SearchMetadata searchMetadata,
-			                     CasanovoResults congaResults)
+			                     CasanovoResults casanovoResults)
     throws Exception {
 
 		LimelightInput limelightInputRoot = new LimelightInput();
@@ -109,38 +110,51 @@ public class XMLBuilder {
 		//
 		// Define the peptide and PSM data
 		//
+
+		Map<String, Integer> peptideIdMap = getPeptideIdMap(casanovoResults);
+
 		ReportedPeptides reportedPeptides = new ReportedPeptides();
 		limelightInputRoot.setReportedPeptides( reportedPeptides );
 		
 		// iterate over each distinct reported peptide
-		for( CasanovoReportedPeptide congaReportedPeptide : congaResults.getPeptidePSMMap().keySet() ) {
+		for( CasanovoReportedPeptide casanovoReportedPeptide : casanovoResults.getPeptidePSMMap().keySet() ) {
 
 			ReportedPeptide xmlReportedPeptide = new ReportedPeptide();
 			reportedPeptides.getReportedPeptide().add( xmlReportedPeptide );
 			
-			xmlReportedPeptide.setReportedPeptideString( congaReportedPeptide.getReportedPeptideString() );
-			xmlReportedPeptide.setSequence( congaReportedPeptide.getNakedPeptide() );
-			
+			xmlReportedPeptide.setReportedPeptideString( casanovoReportedPeptide.getReportedPeptideString() );
+			xmlReportedPeptide.setSequence( casanovoReportedPeptide.getNakedPeptide() );
+
+			// Add in Matched Protein info
+			MatchedProteinsForPeptide xProteinsForPeptide = new MatchedProteinsForPeptide();
+			xmlReportedPeptide.setMatchedProteinsForPeptide( xProteinsForPeptide );
+
+			MatchedProteinForPeptide xProteinForPeptide = new MatchedProteinForPeptide();
+			xProteinsForPeptide.getMatchedProteinForPeptide().add( xProteinForPeptide );
+
+			xProteinForPeptide.setId( BigInteger.valueOf( peptideIdMap.get(casanovoReportedPeptide.getNakedPeptide() ) ) );
+
+
 			// add in the filterable peptide annotations (e.g., q-value)
 			ReportedPeptideAnnotations xmlReportedPeptideAnnotations = new ReportedPeptideAnnotations();
 			xmlReportedPeptide.setReportedPeptideAnnotations( xmlReportedPeptideAnnotations );
 
 			// add in the mods for this peptide
-			if( congaReportedPeptide.getMods() != null && congaReportedPeptide.getMods().keySet().size() > 0 ) {
+			if( casanovoReportedPeptide.getMods() != null && casanovoReportedPeptide.getMods().keySet().size() > 0 ) {
 
 				PeptideModifications xmlModifications = new PeptideModifications();
 				xmlReportedPeptide.setPeptideModifications( xmlModifications );
 
-				for( int position : congaReportedPeptide.getMods().keySet() ) {
+				for( int position : casanovoReportedPeptide.getMods().keySet() ) {
 					PeptideModification xmlModification = new PeptideModification();
 					xmlModifications.getPeptideModification().add( xmlModification );
 
-					xmlModification.setMass( congaReportedPeptide.getMods().get( position ).stripTrailingZeros().setScale( 4, RoundingMode.HALF_UP ) );
+					xmlModification.setMass( casanovoReportedPeptide.getMods().get( position ).stripTrailingZeros().setScale( 4, RoundingMode.HALF_UP ) );
 
 					if(position == 0)
 						xmlModification.setIsNTerminal(true);
 
-					else if(position == congaReportedPeptide.getNakedPeptide().length())
+					else if(position == casanovoReportedPeptide.getNakedPeptide().length())
 						xmlModification.setIsCTerminal(true);
 
 					else
@@ -156,7 +170,7 @@ public class XMLBuilder {
 
 			// iterate over all PSMs for this reported peptide
 
-			for( CasanovoPSM psm : congaResults.getPeptidePSMMap().get(congaReportedPeptide)) {
+			for( CasanovoPSM psm : casanovoResults.getPeptidePSMMap().get(casanovoReportedPeptide)) {
 
 				Psm xmlPsm = new Psm();
 				xmlPsms.getPsm().add( xmlPsm );
@@ -186,9 +200,8 @@ public class XMLBuilder {
 		
 		// add in the matched proteins section
 		MatchedProteinsBuilder.getInstance().buildMatchedProteins(
-				                                                   limelightInputRoot,
-				                                                   conversionParameters.getFastaFile(),
-				                                                   congaResults.getPeptidePSMMap().keySet()
+				                                                    limelightInputRoot,
+																	peptideIdMap
 				                                                  );
 		
 		
@@ -217,6 +230,21 @@ public class XMLBuilder {
 		//make the xml file
 		CreateImportFileFromJavaObjectsMain.getInstance().createImportFileFromJavaObjectsMain( conversionParameters.getLimelightXMLOutputFile(), limelightInputRoot);
 		
+	}
+
+	/**
+	 * Get a map of peptide naked sequence to id number to use to reference it
+	 * @param casanovoResults
+	 * @return
+	 */
+	private Map<String, Integer> getPeptideIdMap(CasanovoResults casanovoResults) {
+		Map<String, Integer> peptideIdMap = new HashMap<>();
+		int i = 1;
+		for( CasanovoReportedPeptide peptide : casanovoResults.getPeptidePSMMap().keySet()) {
+			peptideIdMap.put(peptide.getNakedPeptide(), i);
+			i++;
+		}
+		return peptideIdMap;
 	}
 	
 	
