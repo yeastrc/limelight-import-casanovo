@@ -1,1 +1,3 @@
-# limelight-import-casanovo
+Casanovo to Limelight XML converter
+===============================================
+
