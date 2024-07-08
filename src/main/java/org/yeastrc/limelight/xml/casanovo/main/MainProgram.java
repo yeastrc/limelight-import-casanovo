@@ -49,10 +49,10 @@ public class MainProgram implements Runnable {
 	@CommandLine.Option(names = { "-m", "--mztab" }, required = true, description = "Full path to the Casanovo results file (ends with .mztab). E.g., /data/results/results.mztab")
 	private File mztabFile;
 
-	@CommandLine.Option(names = { "-c", "--config-yaml" }, required = true, description = "Full path to configuration file. E.g., ./casanovo.yaml")
+	@CommandLine.Option(names = { "-c", "--config_yaml" }, required = true, description = "Full path to configuration file. E.g., ./casanovo.yaml")
 	private File configFile;
 
-	@CommandLine.Option(names = { "-o", "--out-file" }, required = true, description = "Full path to use for the Limelight XML output file. E.g., /data/my_analysis/crux.limelight.xml")
+	@CommandLine.Option(names = { "-o", "--out_file" }, required = true, description = "Full path to use for the Limelight XML output file. E.g., /data/my_analysis/crux.limelight.xml")
 	private File outFile;
 
 	@CommandLine.Option(names = { "-v", "--verbose" }, required = false, description = "If this parameter is present, error messages will include a full stacktrace. Helpful for debugging.")
