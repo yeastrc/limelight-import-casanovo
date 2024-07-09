@@ -12,11 +12,13 @@ How To Run (Java option)
 How To Run (Docker option)
 ---------------------------
 You can alternatively run using Docker without installing Java or downloading the program. Run with a command
-similar to:
+similar to the following to see possible parameters:
 
 ``docker run --rm -it --user $(id -u):$(id -g) -v `pwd`:`pwd`  -w `pwd` mriffle/casanovo-to-limelight:latest casanovoToLimelightXML``
 
-with no arguments to see the possible parameters.
+Example usage:
+
+``docker run --rm -it --user $(id -u):$(id -g) -v `pwd`:`pwd`  -w `pwd` mriffle/casanovo-to-limelight:latest casanovoToLimelightXML -m /path/to/results.mztab -c ./casanovo.yaml -o results.limelight.xml -v``
 
 Command line documentation
 ---------------------------
