@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+
+##    Runs cometPercolator2LimelightXML.jar  to convert Comet to Limelight XML
+
+#  Works when run through a sym link:
+path_of_script="$(dirname "$(readlink -f "$0")")"
+
+#  Jar File to run
+jarFileToRun=casanovoToLimelightXML.jar
+
+#  Java JVM parameters
+default_params='-Xmx16192m '
+jvm_parameters=${CONVERTER_JAVA_PARAMS:-$default_params}
+
+# "$@"  is all command line arguments
+
+java ${jvm_parameters} -Drun_dir=`pwd` -jar ${path_of_script}/${jarFileToRun} \
+ "$@"
