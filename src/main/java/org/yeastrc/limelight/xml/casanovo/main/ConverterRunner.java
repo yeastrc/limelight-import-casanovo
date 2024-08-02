@@ -46,6 +46,11 @@ public class ConverterRunner {
 		CasanovoResults casanovoResults = ResultsParser.getResults(conversionParameters.getMztabFile(), configParser);
 		System.err.println( " Done." );
 
+		if(casanovoResults.getPeptidePSMMap().isEmpty()) {
+			System.err.println("\nDid not find any results in Casanovo output. Terminating.");
+			System.exit(1);
+		}
+
 		System.err.print( "Writing out XML..." );
 		(new XMLBuilder()).buildAndSaveXML( conversionParameters, searchMetadata, casanovoResults);
 		System.err.println( " Done." );
