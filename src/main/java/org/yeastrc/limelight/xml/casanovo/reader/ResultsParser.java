@@ -53,7 +53,8 @@ public class ResultsParser {
 					"spectra_ref",
 					"search_engine_score[1]",
 					"charge",
-					"exp_mass_to_charge"
+					"exp_mass_to_charge",
+					"opt_ms_run[1]_aa_scores"
 			};
 
 			for(String line = br.readLine(); line != null; line = br.readLine()) {
@@ -138,15 +139,40 @@ public class ResultsParser {
 		final BigDecimal score = new BigDecimal(fields[columnMap.get("search_engine_score[1]")]);
 		final BigDecimal precursorMZ = new BigDecimal(fields[columnMap.get("exp_mass_to_charge")]);
 
+		
+		List<BigDecimal> perPositionScores = null;
+		{
+			Integer perPositionScores_ColumnIndex = columnMap.get("opt_ms_run[1]_aa_scores");
+			
+			if ( perPositionScores_ColumnIndex != null ) {
+
+				String perPositionScoresAllString = fields[ perPositionScores_ColumnIndex ];
+
+				String[] perPositionScoresStringSplit = perPositionScoresAllString.split(",");
+				
+				perPositionScores = new ArrayList<>( perPositionScoresStringSplit.length );
+				
+				for ( String perPositionScoreString : perPositionScoresStringSplit ) {
+					
+					BigDecimal perPositionScore = new BigDecimal( perPositionScoreString );
+					perPositionScores.add( perPositionScore );
+				}
+			}
+		}
+
 		int scanNumber = getScanNumberFromSpectraRef(spectraRef);
 		byte charge = parseDecimalStringToByte(chargeString);
 
 		CasanovoPSM psm = new CasanovoPSM();
 
+		// For Error messages
+		psm.setReportedPeptideString( reportedPeptideString );
+		
 		psm.setScanNumber(scanNumber);
 		psm.setCharge(charge);
 		psm.setScore(score);
 		psm.setPrecursorMZ(precursorMZ);
+		psm.setPerPositionScores(perPositionScores);		
 
 		String nakedPeptideSequence = getPeptideSequenceFromReportedPeptideString(reportedPeptideString);
 

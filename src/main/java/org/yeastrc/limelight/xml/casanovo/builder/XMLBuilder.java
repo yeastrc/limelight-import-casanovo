@@ -3,18 +3,23 @@ package org.yeastrc.limelight.xml.casanovo.builder;
 import org.yeastrc.limelight.limelight_import.api.xml_dto.*;
 import org.yeastrc.limelight.limelight_import.api.xml_dto.ReportedPeptide.ReportedPeptideAnnotations;
 import org.yeastrc.limelight.limelight_import.api.xml_dto.SearchProgram.PsmAnnotationTypes;
+import org.yeastrc.limelight.limelight_import.api.xml_dto.SearchProgram.PsmPeptidePositionAnnotationTypes;
 import org.yeastrc.limelight.limelight_import.create_import_file_from_java_objects.main.CreateImportFileFromJavaObjectsMain;
 import org.yeastrc.limelight.xml.casanovo.annotation.PSMAnnotationTypeSortOrder;
 import org.yeastrc.limelight.xml.casanovo.annotation.PSMAnnotationTypes;
 import org.yeastrc.limelight.xml.casanovo.annotation.PSMDefaultVisibleAnnotationTypes;
+import org.yeastrc.limelight.xml.casanovo.annotation.PSMPeptidePositionAnnotationTypes;
+import org.yeastrc.limelight.xml.casanovo.annotation.PSMPeptidePosition_DefaultVisibleAnnotationTypes;
 import org.yeastrc.limelight.xml.casanovo.constants.Constants;
 import org.yeastrc.limelight.xml.casanovo.objects.*;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.math.MathContext;
 import java.math.RoundingMode;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -37,6 +42,25 @@ public class XMLBuilder {
 		
 		SearchPrograms searchPrograms = new SearchPrograms();
 		searchProgramInfo.setSearchPrograms( searchPrograms );
+		
+
+		boolean has_PerPositionScores = false;
+		
+		for ( Collection<CasanovoPSM> casanovoPSM_Collection : casanovoResults.getPeptidePSMMap().values() ) {
+			
+			for ( CasanovoPSM casanovoPSM : casanovoPSM_Collection ) {
+				
+				if ( casanovoPSM.getPerPositionScores() != null ) {
+					
+					has_PerPositionScores = true;
+					break;
+				}
+			}
+			if ( has_PerPositionScores ) {
+				break;
+			}
+		}
+
 
 		{
 			SearchProgram searchProgram = new SearchProgram();
@@ -47,7 +71,7 @@ public class XMLBuilder {
 			searchProgram.setVersion(searchMetadata.getCasanovoVersion() );
 
 			//
-			// Define the annotation types present in magnum data
+			// Define the annotation types 
 			//
 			PsmAnnotationTypes psmAnnotationTypes = new PsmAnnotationTypes();
 			searchProgram.setPsmAnnotationTypes( psmAnnotationTypes );
@@ -58,7 +82,21 @@ public class XMLBuilder {
 			for( FilterablePsmAnnotationType annoType : PSMAnnotationTypes.getFilterablePsmAnnotationTypes() ) {
 				filterablePsmAnnotationTypes.getFilterablePsmAnnotationType().add( annoType );
 			}
+			
+			{
+				if ( has_PerPositionScores ) {
 
+					PsmPeptidePositionAnnotationTypes psmPeptidePositionAnnotationTypes = new PsmPeptidePositionAnnotationTypes();
+					searchProgram.setPsmPeptidePositionAnnotationTypes( psmPeptidePositionAnnotationTypes );
+					
+					FilterablePsmPeptidePositionAnnotationTypes filterablePsmPeptidePositionAnnotationTypes = new FilterablePsmPeptidePositionAnnotationTypes();
+					psmPeptidePositionAnnotationTypes.setFilterablePsmPeptidePositionAnnotationTypes( filterablePsmPeptidePositionAnnotationTypes );
+					
+					for ( FilterablePsmPeptidePositionAnnotationType filterablePsmPeptidePositionAnnotationType : PSMPeptidePositionAnnotationTypes.getFilterablePsmPeptidePositionAnnotationTypes() ) {
+						filterablePsmPeptidePositionAnnotationTypes.getFilterablePsmPeptidePositionAnnotationType().add( filterablePsmPeptidePositionAnnotationType );
+					}
+				}
+			}
 		}
 
 		
@@ -73,6 +111,16 @@ public class XMLBuilder {
 
 		for( SearchAnnotation sa : PSMDefaultVisibleAnnotationTypes.getDefaultVisibleAnnotationTypes() ) {
 			xmlVisiblePsmAnnotations.getSearchAnnotation().add( sa );
+		}
+		
+		if ( has_PerPositionScores ) {
+			
+			VisiblePsmPeptidePositionAnnotations visiblePsmPeptidePositionAnnotations = new VisiblePsmPeptidePositionAnnotations();
+			xmlDefaultVisibleAnnotations.setVisiblePsmPeptidePositionAnnotations( visiblePsmPeptidePositionAnnotations );
+			
+			for( SearchAnnotation sa : PSMPeptidePosition_DefaultVisibleAnnotationTypes.getDefaultVisibleAnnotationTypes() ) {
+				visiblePsmPeptidePositionAnnotations.getSearchAnnotation().add( sa );
+			}
 		}
 		
 		//
@@ -185,6 +233,98 @@ public class XMLBuilder {
 					xmlFilterablePsmAnnotation.setAnnotationName( PSMAnnotationTypes.CASANOVO_SCORE );
 					xmlFilterablePsmAnnotation.setSearchProgram( Constants.PROGRAM_NAME_CASANOVO );
 					xmlFilterablePsmAnnotation.setValue( psm.getScore() );
+				}
+				
+				//  Add in the PSM Peptide Position Annotations
+				
+				if ( psm.getPerPositionScores() != null ) {
+					
+					//   https://github.com/Noble-Lab/casanovo/issues/485
+					
+					//  The order of the scores is the same as the order of the amino acids in the peptide.
+
+					// What would the formula be for "the final two amino acid scores should be combined"?    Product.
+					
+					
+					PsmPeptidePositionAnnotations psmPeptidePositionAnnotations = new PsmPeptidePositionAnnotations();
+					xmlPsm.setPsmPeptidePositionAnnotations( psmPeptidePositionAnnotations );
+					
+					FilterablePsmPeptidePositionAnnotations filterablePsmPeptidePositionAnnotations = new FilterablePsmPeptidePositionAnnotations();
+					psmPeptidePositionAnnotations.setFilterablePsmPeptidePositionAnnotations( filterablePsmPeptidePositionAnnotations );
+					
+					//  psm.getPerPositionScores() - 
+					//		Scores order is c-terminal to n-terminal 
+					//		   if the # Scores = (Peptide length + 1), then the last score is for the n-terminal mod
+					//				Combine the scores for the  n-terminal mod and the n-terminal peptide position (last 2 scores)
+					//					by multiplying them.
+
+					int peptideSequence_Length = psm.getPeptideSequence().length();
+
+					int psm_getPerPositionScores_Size = psm.getPerPositionScores().size();
+					
+					if ( psm_getPerPositionScores_Size < peptideSequence_Length ) {
+						String msg = "Per Position Scores is shorter than Peptide Length. Per Position Scores count: "
+								+ psm_getPerPositionScores_Size
+								+ ", Peptide Length: " + peptideSequence_Length
+								+ ", Peptide: " + psm.getPeptideSequence()
+								+ ", Peptide in results file: " + psm.getReportedPeptideString();
+						System.err.println( msg );
+						throw new Exception(msg);
+					}
+
+					if ( psm_getPerPositionScores_Size > ( peptideSequence_Length + 1 ) ) {
+						String msg = "Per Position Scores is larger than Peptide Length + 1 ( +1 for optional score on n-terminal mod). Per Position Scores count: "
+								+ psm_getPerPositionScores_Size
+								+ ", Peptide Length: " + peptideSequence_Length
+								+ ", Peptide: " + psm.getPeptideSequence()
+								+ ", Peptide in results file: " + psm.getReportedPeptideString();
+						System.err.println( msg );
+						throw new Exception(msg);
+					}
+					
+					for ( int peptideSequence_Index = 0; peptideSequence_Index < peptideSequence_Length; peptideSequence_Index++ ) {  
+
+						int perPositionScore_Index = peptideSequence_Index;
+						
+						if ( psm_getPerPositionScores_Size == ( peptideSequence_Length + 1 ) ) {
+							
+							perPositionScore_Index = peptideSequence_Index + 1; // Add 1 to skip n-terminal modification score
+						}
+						
+						BigDecimal perPositionScore = psm.getPerPositionScores().get( perPositionScore_Index );
+						
+						if ( peptideSequence_Index == 0 ) {
+							
+							//  At first Peptide Sequence Position
+							
+							if ( psm_getPerPositionScores_Size == ( peptideSequence_Length + 1 ) ) {
+								
+								//  Have n-terminal mod score so need to combine that with the peptide position 1 (index 0) score
+
+								int perPositionScore_Index_N_Terminal = perPositionScore_Index - 1; // index before current perPositionScore_Index
+							
+								BigDecimal perPositionScore_N_Terminal = psm.getPerPositionScores().get( perPositionScore_Index_N_Terminal );
+
+								//  Create MathContext for multiplication to keep same number of digits
+								int perPositionScore_Scale = perPositionScore.scale();
+								MathContext mathContext = new MathContext( perPositionScore_Scale, RoundingMode.HALF_UP );
+								
+								//  final perPositionScore is perPositionScore multiplied by perPositionScore_N_Terminal
+								
+								perPositionScore = perPositionScore.multiply( perPositionScore_N_Terminal, mathContext );
+							}
+						}
+						
+						int scorePosition = peptideSequence_Index + 1; // Position is 1 based
+					
+						FilterablePsmPeptidePositionAnnotation filterablePsmPeptidePositionAnnotation = new FilterablePsmPeptidePositionAnnotation();
+						filterablePsmPeptidePositionAnnotations.getFilterablePsmPeptidePositionAnnotation().add( filterablePsmPeptidePositionAnnotation );
+						
+						filterablePsmPeptidePositionAnnotation.setSearchProgram( Constants.PROGRAM_NAME_CASANOVO );
+						filterablePsmPeptidePositionAnnotation.setAnnotationName( PSMPeptidePositionAnnotationTypes.CASANOVO_PEPTIDE_POSITION_SCORE );
+						filterablePsmPeptidePositionAnnotation.setPosition( BigInteger.valueOf( scorePosition ) );
+						filterablePsmPeptidePositionAnnotation.setValue( perPositionScore );
+					}
 				}
 				
 				

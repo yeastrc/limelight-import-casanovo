@@ -1,6 +1,7 @@
 package org.yeastrc.limelight.xml.casanovo.objects;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Map;
 
 public class CasanovoPSM {
@@ -8,9 +9,15 @@ public class CasanovoPSM {
 	private BigDecimal score;
 	private byte charge;
 	private int scanNumber;
+	private List<BigDecimal> perPositionScores;
 	private String peptideSequence;
 	private BigDecimal precursorMZ;
 	private Map<Integer,BigDecimal> mods;
+	
+	/**
+	 * For error messages
+	 */
+	private String reportedPeptideString; 
 
 	public BigDecimal getScore() {
 		return score;
@@ -58,5 +65,21 @@ public class CasanovoPSM {
 
 	public void setPrecursorMZ(BigDecimal precursorMZ) {
 		this.precursorMZ = precursorMZ;
+	}
+
+	public List<BigDecimal> getPerPositionScores() {
+		return perPositionScores;
+	}
+
+	public void setPerPositionScores(List<BigDecimal> perPositionScores) {
+		this.perPositionScores = perPositionScores;
+	}
+
+	public String getReportedPeptideString() {
+		return reportedPeptideString;
+	}
+
+	public void setReportedPeptideString(String reportedPeptideString) {
+		this.reportedPeptideString = reportedPeptideString;
 	}
 }
