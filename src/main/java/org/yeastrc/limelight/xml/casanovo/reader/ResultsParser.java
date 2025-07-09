@@ -108,12 +108,24 @@ public class ResultsParser {
 	 * @throws Exception
 	 */
 	private static int getScanNumberFromSpectraRef(String spectraRef) throws Exception {
-		String[] fields = spectraRef.split(":");
-		if(fields.length != 2) { throw new Exception("Unexpected format for spectra_ref"); }
-		fields = fields[1].split("=");
-		if(fields.length != 2) { throw new Exception("Unexpected format for spectra_ref"); }
-		if(!fields[0].equals("scan")) { throw new Exception("Unexpected format for spectra_ref"); }
-		return Integer.parseInt(fields[1]);
+		// Find the position of "scan="
+		int scanIndex = spectraRef.indexOf("scan=");
+		if (scanIndex == -1) {
+			throw new Exception("scan= not found in spectra_ref");
+		}
+
+		// Extract everything after "scan="
+		String afterScan = spectraRef.substring(scanIndex + 5); // 5 is length of "scan="
+
+		// Find the end of the number (either end of string or next space)
+		int endIndex = afterScan.indexOf(' ');
+		String scanNumberStr = (endIndex == -1) ? afterScan : afterScan.substring(0, endIndex);
+
+		try {
+			return Integer.parseInt(scanNumberStr);
+		} catch (NumberFormatException e) {
+			throw new Exception("Invalid scan number format: " + scanNumberStr);
+		}
 	}
 
 	public static byte parseDecimalStringToByte(String decimalString) {
