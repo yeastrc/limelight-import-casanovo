@@ -242,7 +242,7 @@ public class ResultsParser {
 					currentMod.setLength(0);
 					readingMod = false;
 				}
-			} else if (position == 0 && c == NTERM_END && !readingMod) {
+			} else if (position == 0 && c == NTERM_END && readingMod) {
 				// We just finished reading an N-terminal mod
 				currentMod.append(c);
 				processMod(variableMods, position, currentMod.toString(), residuesMap);
