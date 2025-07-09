@@ -206,9 +206,16 @@ public class ResultsParser {
 		return reportedPeptideString.toUpperCase().replaceAll("[^A-Z]", "");
 	}
 
-	private static Map<Integer, BigDecimal> getVariableModsFromReportedMods(String reportedPeptideString, Map<String, BigDecimal> residuesMap) throws Exception {
-		Map<Integer, BigDecimal> variableMods = new HashMap<>();
+	private static final char MOD_START = '[';
+	private static final char MOD_END = ']';
+	private static final char NTERM_END = '-';
 
+	private static Map<Integer, BigDecimal> getVariableModsFromReportedMods(String reportedPeptideString, Map<String, BigDecimal> residuesMap) throws Exception {
+		if (reportedPeptideString == null || reportedPeptideString.isEmpty()) {
+			return new HashMap<>();
+		}
+
+		Map<Integer, BigDecimal> variableMods = new HashMap<>();
 		int position = 0;
 		StringBuilder currentMod = new StringBuilder();
 		char previousResidue = '\0';
@@ -216,43 +223,51 @@ public class ResultsParser {
 
 		for (int i = 0; i < reportedPeptideString.length(); i++) {
 			char c = reportedPeptideString.charAt(i);
-
-			if (Character.isLetter(c)) {
-				if (readingMod) {
-					// We've finished reading a modification
-
-					if(position != 0) {
-						processMod(variableMods, position, previousResidue + currentMod.toString(), residuesMap);
-					} else {
-						processMod(variableMods, position, currentMod.toString(), residuesMap);
-					}
+			if (position == 0 && c == NTERM_END) {
+				if (!readingMod) {
+					throw new IllegalArgumentException("Invalid N-terminal modification format: Expected '[mod]-' but found '-' without opening bracket in: " + reportedPeptideString);
+				}
+				currentMod.append(c);
+				processMod(variableMods, position, currentMod.toString(), residuesMap);
+				currentMod.setLength(0);
+				readingMod = false;
+				position++;
+			} else {
+				if (c == MOD_START) {
+					// we're starting to read a mod
+					readingMod = true;
+					currentMod.append(c);
+				} else if (c == MOD_END && position != 0) {
+					// we've finished reading a mod
+					currentMod.append(c);
+					processMod(variableMods, position, previousResidue + currentMod.toString(), residuesMap);
 					currentMod.setLength(0);
 					readingMod = false;
-				}
-				previousResidue = c;
-				position++;
-			} else if (c == '+' || c == '-') {
-				readingMod = true;
-				currentMod.append(c);
-			} else if (Character.isDigit(c) || c == '.') {
-				if (readingMod) {
-					currentMod.append(c);
 				} else {
-					throw new Exception("Invalid mod format in peptide: " + reportedPeptideString);
+					if (readingMod) {
+						currentMod.append(c);
+					} else {
+						previousResidue = c;
+						position++;
+					}
 				}
 			}
 		}
 
-		// Check if there's a modification at the end of the string
 		if (readingMod) {
-			processMod(variableMods, position - 1, previousResidue + currentMod.toString(), residuesMap);
+			throw new IllegalArgumentException("Incomplete modification: Missing closing bracket in: " + reportedPeptideString);
+		}
+
+		if (currentMod.length() > 0) {
+			throw new IllegalArgumentException("Unexpected modification format at end of peptide: " + reportedPeptideString);
 		}
 
 		return variableMods;
 	}
 
 	private static void processMod(Map<Integer, BigDecimal> variableMods, int position, String fullMod, Map<String, BigDecimal> residuesMap) throws Exception {
-		if (fullMod.equals("C+57.021")) {
+
+		if (fullMod.equals("C[Carbamidomethyl]")) {
 			return; // Ignore this specific modification
 		}
 
