@@ -223,33 +223,38 @@ public class ResultsParser {
 
 		for (int i = 0; i < reportedPeptideString.length(); i++) {
 			char c = reportedPeptideString.charAt(i);
-			if (position == 0 && c == NTERM_END) {
-				if (!readingMod) {
-					throw new IllegalArgumentException("Invalid N-terminal modification format: Expected '[mod]-' but found '-' without opening bracket in: " + reportedPeptideString);
+			if (c == MOD_START) {
+				// we're starting to read a mod
+				readingMod = true;
+				currentMod.append(c);
+			} else if (c == MOD_END) {
+				currentMod.append(c);
+				if (position == 0) {
+					// This is an N-terminal mod, check if next character is '-'
+					if (i + 1 < reportedPeptideString.length() && reportedPeptideString.charAt(i + 1) == NTERM_END) {
+						// Continue reading, don't process yet - wait for the '-'
+					} else {
+						throw new IllegalArgumentException("Invalid N-terminal modification format: Expected '[mod]-' but found ']' without following '-' in: " + reportedPeptideString);
+					}
+				} else {
+					// This is a regular mod, process it now
+					processMod(variableMods, position, previousResidue + currentMod.toString(), residuesMap);
+					currentMod.setLength(0);
+					readingMod = false;
 				}
+			} else if (position == 0 && c == NTERM_END && !readingMod) {
+				// We just finished reading an N-terminal mod
 				currentMod.append(c);
 				processMod(variableMods, position, currentMod.toString(), residuesMap);
 				currentMod.setLength(0);
 				readingMod = false;
 				position++;
 			} else {
-				if (c == MOD_START) {
-					// we're starting to read a mod
-					readingMod = true;
+				if (readingMod) {
 					currentMod.append(c);
-				} else if (c == MOD_END && position != 0) {
-					// we've finished reading a mod
-					currentMod.append(c);
-					processMod(variableMods, position, previousResidue + currentMod.toString(), residuesMap);
-					currentMod.setLength(0);
-					readingMod = false;
 				} else {
-					if (readingMod) {
-						currentMod.append(c);
-					} else {
-						previousResidue = c;
-						position++;
-					}
+					previousResidue = c;
+					position++;
 				}
 			}
 		}
