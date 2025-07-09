@@ -210,7 +210,7 @@ public class ResultsParser {
 	private static final char MOD_END = ']';
 	private static final char NTERM_END = '-';
 
-	private static Map<Integer, BigDecimal> getVariableModsFromReportedMods(String reportedPeptideString, Map<String, BigDecimal> residuesMap) throws Exception {
+	private static Map<Integer, BigDecimal> getVariableModsFromReportedMods(String reportedPeptideString, Map<String, BigDecimal> residuesMap) throws IllegalArgumentException {
 		if (reportedPeptideString == null || reportedPeptideString.isEmpty()) {
 			return new HashMap<>();
 		}
@@ -232,7 +232,8 @@ public class ResultsParser {
 				if (position == 0) {
 					// This is an N-terminal mod, check if next character is '-'
 					if (i + 1 < reportedPeptideString.length() && reportedPeptideString.charAt(i + 1) == NTERM_END) {
-						// Continue reading, don't process yet - wait for the '-'
+						// Stop reading mod, wait for the '-' to process
+						readingMod = false;
 					} else {
 						throw new IllegalArgumentException("Invalid N-terminal modification format: Expected '[mod]-' but found ']' without following '-' in: " + reportedPeptideString);
 					}
@@ -242,7 +243,7 @@ public class ResultsParser {
 					currentMod.setLength(0);
 					readingMod = false;
 				}
-			} else if (position == 0 && c == NTERM_END && readingMod) {
+			} else if (position == 0 && c == NTERM_END && !readingMod) {
 				// We just finished reading an N-terminal mod
 				currentMod.append(c);
 				processMod(variableMods, position, currentMod.toString(), residuesMap);
