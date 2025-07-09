@@ -203,7 +203,28 @@ public class ResultsParser {
 	 * @return
 	 */
 	private static String getPeptideSequenceFromReportedPeptideString(String reportedPeptideString) {
-		return reportedPeptideString.toUpperCase().replaceAll("[^A-Z]", "");
+		if (reportedPeptideString == null || reportedPeptideString.isEmpty()) {
+			return "";
+		}
+
+		StringBuilder peptideSequence = new StringBuilder();
+		boolean readingMod = false;
+
+		for (int i = 0; i < reportedPeptideString.length(); i++) {
+			char c = reportedPeptideString.charAt(i);
+
+			if (c == '[') {
+				readingMod = true;
+			} else if (c == ']') {
+				readingMod = false;
+			} else if (!readingMod && Character.isLetter(c)) {
+				// This is a regular amino acid character
+				peptideSequence.append(Character.toUpperCase(c));
+			}
+			// Skip everything else (including '-' which is never part of peptide sequence)
+		}
+
+		return peptideSequence.toString();
 	}
 
 	private static final char MOD_START = '[';
