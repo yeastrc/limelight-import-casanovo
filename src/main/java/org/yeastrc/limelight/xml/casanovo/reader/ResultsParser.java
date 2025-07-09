@@ -215,7 +215,7 @@ public class ResultsParser {
 			return new HashMap<>();
 		}
 
-		Map<Integer, BigDecimal> variableMods = new HashMap<>()
+		Map<Integer, BigDecimal> variableMods = new HashMap<>();
 		int position = 0;
 		StringBuilder currentMod = new StringBuilder();
 		char previousResidue = '\0';
