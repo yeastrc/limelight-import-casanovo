@@ -210,12 +210,12 @@ public class ResultsParser {
 	private static final char MOD_END = ']';
 	private static final char NTERM_END = '-';
 
-	private static Map<Integer, BigDecimal> getVariableModsFromReportedMods(String reportedPeptideString, Map<String, BigDecimal> residuesMap) throws IllegalArgumentException {
+	private static Map<Integer, BigDecimal> getVariableModsFromReportedMods(String reportedPeptideString, Map<String, BigDecimal> residuesMap) throws Exception {
 		if (reportedPeptideString == null || reportedPeptideString.isEmpty()) {
 			return new HashMap<>();
 		}
 
-		Map<Integer, BigDecimal> variableMods = new HashMap<>();
+		Map<Integer, BigDecimal> variableMods = new HashMap<>()
 		int position = 0;
 		StringBuilder currentMod = new StringBuilder();
 		char previousResidue = '\0';
