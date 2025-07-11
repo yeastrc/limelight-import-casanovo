@@ -8,6 +8,8 @@ public class CasanovoPSM {
 
 	private BigDecimal score;
 	private BigDecimal efdr;
+	private BigDecimal adjScore;
+
 	private byte charge;
 	private int scanNumber;
 	private List<BigDecimal> perPositionScores;
@@ -90,5 +92,13 @@ public class CasanovoPSM {
 
 	public void setEfdr(BigDecimal efdr) {
 		this.efdr = efdr;
+	}
+
+	public BigDecimal getAdjScore() {
+		return adjScore;
+	}
+
+	public void setAdjScore(BigDecimal adjScore) {
+		this.adjScore = adjScore;
 	}
 }

@@ -21,7 +21,7 @@ public class EstimatedFDRCalculator {
 
         for(CasanovoReportedPeptide casanovoReportedPeptide: casanovoResults.getPeptidePSMMap().keySet()) {
             for(CasanovoPSM casanovoPSM : casanovoResults.getPeptidePSMMap().get(casanovoReportedPeptide)) {
-                BigDecimal score = casanovoPSM.getScore();
+                BigDecimal score = casanovoPSM.getAdjScore();
                 if (!casanovoPSMByScore.containsKey(score)) {
                     casanovoPSMByScore.put(score, new ArrayList<>());
                 }

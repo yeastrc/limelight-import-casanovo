@@ -34,6 +34,13 @@ public class PSMDefaultVisibleAnnotationTypes {
 
 		{
 			SearchAnnotation annotation = new SearchAnnotation();
+			annotation.setAnnotationName( PSMAnnotationTypes.CASANOVO_ADJ_SCORE );
+			annotation.setSearchProgram( Constants.PROGRAM_NAME_CASANOVO );
+			annotations.add( annotation );
+		}
+
+		{
+			SearchAnnotation annotation = new SearchAnnotation();
 			annotation.setAnnotationName( PSMAnnotationTypes.CASANOVO_SCORE );
 			annotation.setSearchProgram( Constants.PROGRAM_NAME_CASANOVO );
 			annotations.add( annotation );

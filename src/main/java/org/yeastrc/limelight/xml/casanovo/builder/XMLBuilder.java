@@ -239,6 +239,15 @@ public class XMLBuilder {
 					FilterablePsmAnnotation xmlFilterablePsmAnnotation = new FilterablePsmAnnotation();
 					xmlFilterablePsmAnnotations.getFilterablePsmAnnotation().add( xmlFilterablePsmAnnotation );
 
+					xmlFilterablePsmAnnotation.setAnnotationName( PSMAnnotationTypes.CASANOVO_ADJ_SCORE );
+					xmlFilterablePsmAnnotation.setSearchProgram( Constants.PROGRAM_NAME_CASANOVO );
+					xmlFilterablePsmAnnotation.setValue( psm.getAdjScore() );
+				}
+
+				{
+					FilterablePsmAnnotation xmlFilterablePsmAnnotation = new FilterablePsmAnnotation();
+					xmlFilterablePsmAnnotations.getFilterablePsmAnnotation().add( xmlFilterablePsmAnnotation );
+
 					xmlFilterablePsmAnnotation.setAnnotationName( PSMAnnotationTypes.CASANOVO_EFDR );
 					xmlFilterablePsmAnnotation.setSearchProgram( Constants.PROGRAM_NAME_CASANOVO );
 					xmlFilterablePsmAnnotation.setValue( psm.getEfdr() );

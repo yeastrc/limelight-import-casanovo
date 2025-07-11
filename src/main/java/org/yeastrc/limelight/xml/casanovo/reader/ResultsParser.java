@@ -149,6 +149,7 @@ public class ResultsParser {
 		final String spectraRef = fields[columnMap.get("spectra_ref")];
 		final String chargeString = fields[columnMap.get("charge")];
 		final BigDecimal score = new BigDecimal(fields[columnMap.get("search_engine_score[1]")]);
+		final BigDecimal adjScore = score.add(BigDecimal.ONE);
 		final BigDecimal precursorMZ = new BigDecimal(fields[columnMap.get("exp_mass_to_charge")]);
 
 		
@@ -183,6 +184,7 @@ public class ResultsParser {
 		psm.setScanNumber(scanNumber);
 		psm.setCharge(charge);
 		psm.setScore(score);
+		psm.setAdjScore(adjScore);
 		psm.setPrecursorMZ(precursorMZ);
 		psm.setPerPositionScores(perPositionScores);		
 
