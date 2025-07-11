@@ -1,11 +1,7 @@
 package org.yeastrc.limelight.xml.casanovo.utils;
 
-import org.yeastrc.limelight.xml.casanovo.constants.Constants;
-
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.AbstractMap;
-import java.util.HashMap;
 import java.util.Map;
 
 public class ModParsingUtils {

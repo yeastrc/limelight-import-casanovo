@@ -25,6 +25,7 @@ import org.yeastrc.limelight.xml.casanovo.reader.ConfigParser;
 import org.yeastrc.limelight.xml.casanovo.reader.ResultsParser;
 import org.yeastrc.limelight.xml.casanovo.objects.SearchMetadata;
 import org.yeastrc.limelight.xml.casanovo.reader.SearchMetadataParser;
+import org.yeastrc.limelight.xml.casanovo.utils.EstimatedFDRCalculator;
 
 public class ConverterRunner {
 
@@ -50,6 +51,10 @@ public class ConverterRunner {
 			System.err.println("\nDid not find any results in Casanovo output. Terminating.");
 			System.exit(1);
 		}
+
+		System.err.print( "Adding estimated FDR calculations to Casanovo PSMs..." );
+		EstimatedFDRCalculator.generateEstimatedFDRMap(casanovoResults);
+		System.err.println( " Done." );
 
 		System.err.print( "Writing out XML..." );
 		(new XMLBuilder()).buildAndSaveXML( conversionParameters, searchMetadata, casanovoResults);

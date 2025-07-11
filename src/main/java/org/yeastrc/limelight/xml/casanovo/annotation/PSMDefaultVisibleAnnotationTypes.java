@@ -39,6 +39,13 @@ public class PSMDefaultVisibleAnnotationTypes {
 			annotations.add( annotation );
 		}
 
+		{
+			SearchAnnotation annotation = new SearchAnnotation();
+			annotation.setAnnotationName( PSMAnnotationTypes.CASANOVO_EFDR );
+			annotation.setSearchProgram( Constants.PROGRAM_NAME_CASANOVO );
+			annotations.add( annotation );
+		}
+
 		return annotations;
 	}
 	
