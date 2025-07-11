@@ -270,7 +270,6 @@ public class ResultsParser {
 				processMod(variableMods, position, currentMod.toString(), residuesMap);
 				currentMod.setLength(0);
 				readingMod = false;
-				position++;
 			} else {
 				if (readingMod) {
 					currentMod.append(c);
