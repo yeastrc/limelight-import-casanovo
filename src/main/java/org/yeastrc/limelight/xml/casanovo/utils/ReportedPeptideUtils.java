@@ -5,7 +5,7 @@ import org.yeastrc.limelight.xml.casanovo.objects.CasanovoReportedPeptide;
 
 public class ReportedPeptideUtils {
 
-	public static CasanovoReportedPeptide getReportedPeptideForPSM(CasanovoPSM psm ) throws Exception {
+	public static CasanovoReportedPeptide getReportedPeptideForPSM(CasanovoPSM psm ) {
 		
 		CasanovoReportedPeptide rp = new CasanovoReportedPeptide();
 		
