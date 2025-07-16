@@ -234,6 +234,15 @@ public class XMLBuilder {
 					xmlFilterablePsmAnnotation.setSearchProgram( Constants.PROGRAM_NAME_CASANOVO );
 					xmlFilterablePsmAnnotation.setValue( psm.getScore() );
 				}
+
+				{
+					FilterablePsmAnnotation xmlFilterablePsmAnnotation = new FilterablePsmAnnotation();
+					xmlFilterablePsmAnnotations.getFilterablePsmAnnotation().add( xmlFilterablePsmAnnotation );
+
+					xmlFilterablePsmAnnotation.setAnnotationName( PSMAnnotationTypes.CASANOVO_ADJ_SCORE );
+					xmlFilterablePsmAnnotation.setSearchProgram( Constants.PROGRAM_NAME_CASANOVO );
+					xmlFilterablePsmAnnotation.setValue( psm.getAdjScore() );
+				}
 				
 				//  Add in the PSM Peptide Position Annotations
 				

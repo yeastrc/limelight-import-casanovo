@@ -7,6 +7,8 @@ import java.util.Map;
 public class CasanovoPSM {
 
 	private BigDecimal score;
+	private BigDecimal adjScore;
+
 	private byte charge;
 	private int scanNumber;
 	private List<BigDecimal> perPositionScores;
@@ -81,5 +83,13 @@ public class CasanovoPSM {
 
 	public void setReportedPeptideString(String reportedPeptideString) {
 		this.reportedPeptideString = reportedPeptideString;
+	}
+
+	public BigDecimal getAdjScore() {
+		return adjScore;
+	}
+
+	public void setAdjScore(BigDecimal adjScore) {
+		this.adjScore = adjScore;
 	}
 }
