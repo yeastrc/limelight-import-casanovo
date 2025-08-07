@@ -153,8 +153,6 @@ public class XMLBuilder {
 		// Define the peptide and PSM data
 		//
 
-		Map<String, Integer> peptideIdMap = getPeptideIdMap(casanovoResults);
-
 		ReportedPeptides reportedPeptides = new ReportedPeptides();
 		limelightInputRoot.setReportedPeptides( reportedPeptides );
 		
@@ -166,16 +164,6 @@ public class XMLBuilder {
 			
 			xmlReportedPeptide.setReportedPeptideString( casanovoReportedPeptide.getReportedPeptideString() );
 			xmlReportedPeptide.setSequence( casanovoReportedPeptide.getNakedPeptide() );
-
-			// Add in Matched Protein info
-			MatchedProteinsForPeptide xProteinsForPeptide = new MatchedProteinsForPeptide();
-			xmlReportedPeptide.setMatchedProteinsForPeptide( xProteinsForPeptide );
-
-			MatchedProteinForPeptide xProteinForPeptide = new MatchedProteinForPeptide();
-			xProteinsForPeptide.getMatchedProteinForPeptide().add( xProteinForPeptide );
-
-			xProteinForPeptide.setId( BigInteger.valueOf( peptideIdMap.get(casanovoReportedPeptide.getNakedPeptide() ) ) );
-
 
 			// add in the filterable peptide annotations (e.g., q-value)
 			ReportedPeptideAnnotations xmlReportedPeptideAnnotations = new ReportedPeptideAnnotations();
@@ -350,11 +338,11 @@ public class XMLBuilder {
 		
 		}//end iterating over reported peptides
 		
-		// add in the matched proteins section
-		MatchedProteinsBuilder.getInstance().buildMatchedProteins(
-				                                                    limelightInputRoot,
-																	peptideIdMap
-				                                                  );
+		////
+		
+		//  Add in "No Matched Proteins" element to indicate No Matched Proteins
+				
+		limelightInputRoot.setNoMatchedProteins( new NoMatchedProteins() );
 		
 		
 		// add in the config file(s)

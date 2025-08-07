@@ -29,7 +29,7 @@ repositories {
 dependencies {
     compile 'org.yeastrc:yrc-fasta-utils:2.0.2'
     
-    compile 'org.yeastrc:limelight-import-api:4.2.0'
+    compile 'org.yeastrc:limelight-import-api:4.3.1'
     
     compile 'info.picocli:picocli:4.0.0-alpha-1'
     compile 'org.yaml:snakeyaml:2.2'
