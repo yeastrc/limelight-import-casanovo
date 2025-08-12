@@ -6,6 +6,6 @@ public class Constants {
 
 	public static final String CONVERSION_PROGRAM_NAME = "casanovoToLimelightXML.jar";
 	public static final String CONVERSION_PROGRAM_URI = "https://github.com/yeastrc/limelight-import-casanovo";
-	public static final String CONVERSION_PROGRAM_VERSION = "1.4.1";
+	public static final String CONVERSION_PROGRAM_VERSION = "1.5.0";
 
 }
