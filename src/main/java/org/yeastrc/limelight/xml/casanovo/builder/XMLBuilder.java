@@ -32,7 +32,8 @@ public class XMLBuilder {
 
 		LimelightInput limelightInputRoot = new LimelightInput();
 
-		limelightInputRoot.setFastaFilename( "none" );
+		//  Remove since no longer required
+		// limelightInputRoot.setFastaFilename( "none" );
 		
 		// add in the conversion program (this program) information
 		ConversionProgramBuilder.createInstance().buildConversionProgramSection( limelightInputRoot, conversionParameters);
