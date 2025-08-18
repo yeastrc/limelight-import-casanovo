@@ -32,6 +32,8 @@ public class ConversionProgramInfo {
 		cpi.setURI( Constants.CONVERSION_PROGRAM_URI );
 		cpi.setVersion( Constants.CONVERSION_PROGRAM_VERSION );
 		
+		cpi.setVersion( "COW" );
+		
 		cpi.setArguments( arguments );
 		cpi.setConversionDate( LocalDateTime.now() );
 		

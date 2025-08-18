@@ -30,7 +30,8 @@ import java.io.InputStreamReader;
 
 @CommandLine.Command(name = "java -jar " + Constants.CONVERSION_PROGRAM_NAME,
 		mixinStandardHelpOptions = true,
-		version = Constants.CONVERSION_PROGRAM_NAME + " " + Constants.CONVERSION_PROGRAM_VERSION,
+//		version = Constants.CONVERSION_PROGRAM_NAME + " " + Constants.CONVERSION_PROGRAM_VERSION,
+				versionProvider = LimelightConverterVersionProvider.class,
 		sortOptions = false,
 		synopsisHeading = "%n",
 		descriptionHeading = "%n@|bold,underline Description:|@%n%n",
