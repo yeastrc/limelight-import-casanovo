@@ -32,9 +32,6 @@ public class ConversionProgramInfo {
 		cpi.setName( Constants.CONVERSION_PROGRAM_NAME );
 		cpi.setURI( Constants.CONVERSION_PROGRAM_URI );
 		cpi.setVersion( Limelight_GetVersion_FromFile_SetInBuildFromEnvironmentVariable.getVersion_FromFile_SetInBuildFromEnvironmentVariable() );
-		
-		cpi.setVersion( "COW" );
-		
 		cpi.setArguments( arguments );
 		cpi.setConversionDate( LocalDateTime.now() );
 		
