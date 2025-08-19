@@ -4,6 +4,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
 
+//  Alternate coding solution reading the version from the META-INF/MANIFEST.MF file
+
+//import java.util.jar.Attributes;
+//import java.util.jar.JarFile;
+//import java.util.jar.Manifest;
+
 /**
  * 
  * Return a version number for the program
@@ -40,5 +46,25 @@ public class Limelight_GetVersion_FromFile_SetInBuildFromEnvironmentVariable {
 			e.printStackTrace();
 			throw e;
 		}
+		
+		//  Alternate coding solution reading the version from the META-INF/MANIFEST.MF file
+		
+
+		   // Get the JAR file containing this class
+//     String jarPath = Limelight_GetVersion_FromFile_SetInBuildFromEnvironmentVariable.class
+//         .getProtectionDomain()
+//         .getCodeSource()
+//         .getLocation()
+//         .getPath();
+//     
+//     try (JarFile jarFile = new JarFile(jarPath)) {
+//         Manifest manifest = jarFile.getManifest();
+//         if (manifest != null) {
+//             Attributes mainAttributes = manifest.getMainAttributes();
+//             return mainAttributes.getValue( "LIMELIGHT_RELEASE_TAG" );
+//         }
+//         return null;
+//     }
+     
 	}
 }
