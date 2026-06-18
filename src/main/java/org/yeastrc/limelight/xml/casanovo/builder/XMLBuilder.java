@@ -70,6 +70,11 @@ public class XMLBuilder {
 			searchProgram.setName( Constants.PROGRAM_NAME_CASANOVO);
 			searchProgram.setDisplayName( Constants.PROGRAM_NAME_CASANOVO );
 			searchProgram.setVersion(searchMetadata.getCasanovoVersion() );
+			// The mzTab model setting is typically an absolute checkpoint path; surface just the file
+			// name as provenance rather than the machine-specific directory it was loaded from.
+			String modelPath = searchMetadata.getModel();
+			String modelName = modelPath.substring( modelPath.lastIndexOf('/') + 1 );
+			searchProgram.setDescription( "Model: " + modelName );
 
 			//
 			// Define the annotation types 

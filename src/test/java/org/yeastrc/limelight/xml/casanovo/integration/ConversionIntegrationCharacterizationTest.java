@@ -121,6 +121,21 @@ public class ConversionIntegrationCharacterizationTest {
     }
 
     @Test
+    void searchProgramCarriesVersionAndModel() throws Throwable {
+        LimelightInput in = unmarshal(convert(SINGLE, CONFIG));
+
+        List<org.yeastrc.limelight.limelight_import.api.xml_dto.SearchProgram> programs =
+                in.getSearchProgramInfo().getSearchPrograms().getSearchProgram();
+        assertEquals(1, programs.size());
+
+        org.yeastrc.limelight.limelight_import.api.xml_dto.SearchProgram casanovo = programs.get(0);
+        assertEquals("5.2.0", casanovo.getVersion());
+        // the mzTab MTD model line is surfaced as the search-program description: just the checkpoint
+        // file name, with the machine-specific directory path stripped off
+        assertEquals("Model: casanovo_orbitrap_v5-2-0.ckpt", casanovo.getDescription());
+    }
+
+    @Test
     void producedXmlPassesLimelightValidator() throws Throwable {
         // also gives LimelightXMLValidator direct coverage
         LimelightXMLValidator.validateLimelightXML(convert(SINGLE, CONFIG));

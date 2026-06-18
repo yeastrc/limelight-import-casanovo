@@ -110,19 +110,10 @@ gracefully via grgit — the build still works with no `.git` directory.
 
 Identified during the refactor and intentionally left for later:
 
-- **Model metadata is required but unused (C3).** `SearchMetadataParser` *requires* the Casanovo
-  `model` line (throws `MissingMetadataException` if absent) yet the value is never written to the
-  output. Decide whether to emit it into the Limelight XML or stop requiring it.
 - **Synthetic-only test coverage.** No real sample contains an **N-terminal modification** or a
   per-position-score count of `length + 1` (the `XMLBuilder` path that multiplies the N-terminal-mod
   score into residue 1). Both are covered only by hand-built ProForma fixtures — re-validate against
   real Casanovo output if such an example appears.
-- **Docker/CI changes are not runtime-verified.** The `Dockerfile` (pinned `amazoncorretto:11.0.31`,
-  `yum update` removed) and the `.github/workflows/` files were validated only structurally (tag
-  existence, YAML) — not by building the image or running Actions. Confirm with a real image build / CI run.
 - **Launcher default heap.** The `casanovoToLimelightXML` wrapper hard-codes `-Xmx16192m` (overridable
-  via `CONVERTER_JAVA_PARAMS`), which can exceed container memory limits. Left unchanged to preserve behavior.
-- **`medium.mztab` is ~213 KB** (vs a ~150 KB target). It can be resampled smaller, but its expected
-  counts are hard-coded in `integration/ConversionSmokeTest` and must be updated together.
-- **Static analysis is compiler-native only.** Only `-Xlint:all -Werror` is enforced; Checkstyle, PMD,
-  SpotBugs, and Error Prone were surveyed but not adopted.
+  via `CONVERTER_JAVA_PARAMS`), which can exceed container memory limits. Reviewed and intentionally left
+  unchanged to preserve behavior; revisit (e.g. `-XX:MaxRAMPercentage`) only if it surfaces in the wild.
