@@ -7,7 +7,7 @@ limelight XML suitable for import into the limelight web application.
 How To Run (Java option)
 -------------------------
 1. Download the [latest release](https://github.com/yeastrc/limelight-import-casanovo/releases).
-2. Run the program ``java -jar casanovoToLimelightXML.jar`` with no arguments to see the possible parameters. Requires Java 8 or higher.
+2. Run the program ``java -jar casanovoToLimelightXML.jar`` with no arguments to see the possible parameters. Requires Java 11 or higher.
 
 How To Run (Docker option)
 ---------------------------
