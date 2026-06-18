@@ -1,6 +1,5 @@
 package org.yeastrc.limelight.xml.casanovo.annotation;
 
-import org.yeastrc.limelight.limelight_import.api.xml_dto.DescriptivePsmAnnotationType;
 import org.yeastrc.limelight.limelight_import.api.xml_dto.FilterDirectionType;
 import org.yeastrc.limelight.limelight_import.api.xml_dto.FilterablePsmAnnotationType;
 
@@ -49,15 +48,4 @@ public class PSMAnnotationTypes {
 		return types;
 	}
 
-	/**
-	 * Get the list of descriptive (non-filterable) PSM annotation types in Kojak data
-	 * @return
-	 */
-	public static List<DescriptivePsmAnnotationType> getDescriptivePsmAnnotationTypes() {
-		List<DescriptivePsmAnnotationType> types = new ArrayList<>();
-
-
-		return types;
-	}
-	
 }

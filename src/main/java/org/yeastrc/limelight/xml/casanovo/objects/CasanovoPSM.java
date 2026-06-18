@@ -12,6 +12,7 @@ public class CasanovoPSM {
 
 	private byte charge;
 	private int scanNumber;
+	private int msRunIndex;
 	private List<BigDecimal> perPositionScores;
 	private String peptideSequence;
 	private BigDecimal precursorMZ;
@@ -44,6 +45,15 @@ public class CasanovoPSM {
 
 	public void setScanNumber(int scanNumber) {
 		this.scanNumber = scanNumber;
+	}
+
+	/** The mzTab {@code ms_run} index (1-based) identifying which spectrum file this PSM came from. */
+	public int getMsRunIndex() {
+		return msRunIndex;
+	}
+
+	public void setMsRunIndex(int msRunIndex) {
+		this.msRunIndex = msRunIndex;
 	}
 
 	public String getPeptideSequence() {

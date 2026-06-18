@@ -27,7 +27,7 @@ import java.util.List;
 public class PSMDefaultVisibleAnnotationTypes {
 
 	/**
-	 * Get the default visible annotation types for Magnum data
+	 * Get the default visible annotation types for Casanovo data
 	 */
 	public static List<SearchAnnotation> getDefaultVisibleAnnotationTypes() {
 		List<SearchAnnotation> annotations = new ArrayList<SearchAnnotation>();

@@ -1,0 +1,6 @@
+plugins {
+    // Allows the Java toolchain (Java 11) to be auto-provisioned when a matching JDK is not installed.
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '0.8.0'
+}
+
+rootProject.name = 'limelight-import-casanovo'

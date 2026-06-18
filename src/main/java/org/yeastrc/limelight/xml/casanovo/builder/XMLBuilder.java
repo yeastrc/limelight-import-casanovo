@@ -20,14 +20,14 @@ import java.math.RoundingMode;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Map;
 
 public class XMLBuilder {
 
 	public void buildAndSaveXML( ConversionParameters conversionParameters,
 								 SearchMetadata searchMetadata,
-			                     CasanovoResults casanovoResults)
+			                     CasanovoResults casanovoResults,
+			                     Map<String, BigDecimal> staticModifications)
     throws Exception {
 
 		LimelightInput limelightInputRoot = new LimelightInput();
@@ -138,17 +138,18 @@ public class XMLBuilder {
 		}
 		
 		//
-		// Define the static mods
+		// Define the static mods (derived from the Casanovo config's allowed_fixed_mods)
 		//
 
-		// Assume casanovo always has +57.021464 on C
 		StaticModifications smods = new StaticModifications();
 		limelightInputRoot.setStaticModifications( smods );
 
-		StaticModification xmlSmod = new StaticModification();
-		xmlSmod.setAminoAcid("C");
-		xmlSmod.setMassChange(new BigDecimal("57.021464"));
-		smods.getStaticModification().add(xmlSmod);
+		for( Map.Entry<String, BigDecimal> staticMod : staticModifications.entrySet() ) {
+			StaticModification xmlSmod = new StaticModification();
+			xmlSmod.setAminoAcid( staticMod.getKey() );
+			xmlSmod.setMassChange( staticMod.getValue() );
+			smods.getStaticModification().add( xmlSmod );
+		}
 
 		//
 		// Define the peptide and PSM data
@@ -185,11 +186,8 @@ public class XMLBuilder {
 					if(position == 0)
 						xmlModification.setIsNTerminal(true);
 
-					else if(position == casanovoReportedPeptide.getNakedPeptide().length())
-						xmlModification.setIsCTerminal(true);
-
 					else
-						xmlModification.setPosition( new BigInteger( String.valueOf( position ) ) );
+						xmlModification.setPosition( BigInteger.valueOf( position ) );
 
 				}
 			}
@@ -208,7 +206,7 @@ public class XMLBuilder {
 
 				xmlPsm.setScanNumber( new BigInteger( String.valueOf( psm.getScanNumber() ) ) );
 				xmlPsm.setPrecursorCharge( new BigInteger( String.valueOf( psm.getCharge() ) ) );
-				xmlPsm.setScanFileName(searchMetadata.getScanFileName());
+				xmlPsm.setScanFileName(searchMetadata.getScanFileName(psm.getMsRunIndex()));
 				xmlPsm.setPrecursorMZ(psm.getPrecursorMZ());
 
 				// add in the filterable PSM annotations (e.g., score)
@@ -259,11 +257,10 @@ public class XMLBuilder {
 					FilterablePsmPeptidePositionAnnotations filterablePsmPeptidePositionAnnotations = new FilterablePsmPeptidePositionAnnotations();
 					psmPeptidePositionAnnotations.setFilterablePsmPeptidePositionAnnotations( filterablePsmPeptidePositionAnnotations );
 					
-					//  psm.getPerPositionScores() - 
-					//		Scores order is c-terminal to n-terminal 
-					//		   if the # Scores = (Peptide length + 1), then the last score is for the n-terminal mod
-					//				Combine the scores for the  n-terminal mod and the n-terminal peptide position (last 2 scores)
-					//					by multiplying them.
+					//  psm.getPerPositionScores() -
+					//		Scores are in the same order as the amino acids (N-terminal to C-terminal).
+					//		If (# scores == peptide length + 1) the FIRST score (index 0) is for the N-terminal mod;
+					//		combine it with the first residue's score by multiplying them.
 
 					int peptideSequence_Length = psm.getPeptideSequence().length();
 
@@ -373,20 +370,4 @@ public class XMLBuilder {
 		
 	}
 
-	/**
-	 * Get a map of peptide naked sequence to id number to use to reference it
-	 * @param casanovoResults
-	 * @return
-	 */
-	private Map<String, Integer> getPeptideIdMap(CasanovoResults casanovoResults) {
-		Map<String, Integer> peptideIdMap = new HashMap<>();
-		int i = 1;
-		for( CasanovoReportedPeptide peptide : casanovoResults.getPeptidePSMMap().keySet()) {
-			peptideIdMap.put(peptide.getNakedPeptide(), i);
-			i++;
-		}
-		return peptideIdMap;
-	}
-	
-	
 }
