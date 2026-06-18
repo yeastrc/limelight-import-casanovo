@@ -38,6 +38,34 @@ import java.util.regex.Pattern;
  */
 public class ResultsParser {
 
+	/**
+	 * The per-amino-acid scores column has been named differently by different versions of Casanovo.
+	 * Older versions use "opt_ms_run[1]_aa_scores"; newer versions (e.g. 5.x) use "opt_global_aa_scores".
+	 * Both contain the same data (comma-separated per-residue scores), so we accept either name.
+	 * The names are listed in preference order.
+	 */
+	private static final String[] AA_SCORES_COLUMN_NAMES = new String[] {
+			"opt_ms_run[1]_aa_scores",
+			"opt_global_aa_scores"
+	};
+
+	/**
+	 * Find the index of the per-amino-acid scores column, accommodating the differing column
+	 * names used by different versions of Casanovo.
+	 *
+	 * @param columnMap map of column header to its index on the line
+	 * @return the index of the per-amino-acid scores column, or null if none is present
+	 */
+	private static Integer getAAScoresColumnIndex(Map<String, Integer> columnMap) {
+		for(String columnName : AA_SCORES_COLUMN_NAMES) {
+			Integer index = columnMap.get(columnName);
+			if(index != null) {
+				return index;
+			}
+		}
+		return null;
+	}
+
 	public static CasanovoResults getResults(File targetsFile, ConfigParser configParser) throws Throwable {
 
 		CasanovoResults results = new CasanovoResults();
@@ -53,8 +81,7 @@ public class ResultsParser {
 					"spectra_ref",
 					"search_engine_score[1]",
 					"charge",
-					"exp_mass_to_charge",
-					"opt_ms_run[1]_aa_scores"
+					"exp_mass_to_charge"
 			};
 
 			for(String line = br.readLine(); line != null; line = br.readLine()) {
@@ -66,6 +93,11 @@ public class ResultsParser {
 						if(!columnMap.containsKey(requiredHeader)) {
 							throw new RuntimeException("Could not find column for \"" + requiredHeader + "\"");
 						}
+					}
+
+					if(getAAScoresColumnIndex(columnMap) == null) {
+						throw new RuntimeException("Could not find a per-amino-acid scores column (expected one of: \""
+								+ String.join("\", \"", AA_SCORES_COLUMN_NAMES) + "\")");
 					}
 
 				} else if(line.startsWith("PSM")) {
@@ -154,7 +186,7 @@ public class ResultsParser {
 		
 		List<BigDecimal> perPositionScores = null;
 		{
-			Integer perPositionScores_ColumnIndex = columnMap.get("opt_ms_run[1]_aa_scores");
+			Integer perPositionScores_ColumnIndex = getAAScoresColumnIndex(columnMap);
 			
 			if ( perPositionScores_ColumnIndex != null ) {
 
