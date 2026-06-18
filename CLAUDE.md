@@ -1,0 +1,119 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## What this is
+
+A command-line converter that turns [Casanovo](https://github.com/Noble-Lab/casanovo) de novo
+peptide-sequencing output (an `.mztab` results file + its Casanovo YAML config) into **Limelight XML**
+for import into the Limelight proteomics web application. It is a single-shot batch tool — no server,
+no persistent state. Entry point: `main/MainProgram` (picocli CLI) → `main/ConverterRunner`.
+
+## Build, test, run
+
+The build targets **Java 11** via a Gradle toolchain, but **Gradle (8.10.2) must itself run on
+JDK 11–23**. The machine's default `java` may be newer (e.g. 25) and will fail to launch Gradle — set
+`JAVA_HOME` to an 11–21 JDK first. A Java 11 toolchain is auto-detected or provisioned (foojay).
+
+```bash
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64   # any JDK 11–21
+./gradlew build            # compile + test + build jar
+./gradlew test             # unit + integration tests
+./gradlew shadowJar        # -> build/libs/casanovoToLimelightXML.jar (default task)
+./gradlew jacocoTestReport # coverage -> build/reports/jacoco/test/html (report-only, no gate)
+```
+
+Run a single test class or method:
+
+```bash
+./gradlew test --tests 'org.yeastrc.limelight.xml.casanovo.reader.ProformaPeptideParserTest'
+./gradlew test --tests '*ProformaPeptideParserTest.oxidationOnFirstResidue'
+```
+
+Run the tool:
+
+```bash
+java -jar build/libs/casanovoToLimelightXML.jar -m results.mztab -c casanovo.yaml -o out.limelight.xml
+```
+
+**Strict linting is enforced:** every Java source compiles with `-Xlint:all -Werror`, so *any* compiler
+warning fails the build (main and test). New code must be warning-clean.
+
+## Architecture
+
+`ConverterRunner` runs a linear pipeline, one class per stage:
+
+`reader/ConfigParser` (YAML → residue masses + fixed mods) → `reader/SearchMetadataParser` (mzTab MTD
+lines → version/model/ms_run files) → `reader/ResultsParser` (mzTab PSM rows → `CasanovoResults`) →
+`utils/EstimatedFDRCalculator` (mutates PSMs with eFDR in place) → `builder/XMLBuilder` (assembles the
+Limelight `LimelightInput` DTO tree and writes XML) → `main/LimelightXMLValidator` (round-trip unmarshal
+to validate). Packages: `reader/`, `objects/` (DTOs), `utils/`, `builder/`, `annotation/` (Limelight
+annotation-type registries consumed by `XMLBuilder`), `constants/`, `main/`.
+
+### Domain logic that spans multiple files — read these together before changing parsing/output
+
+- **Modifications come from the ProForma column, not `sequence`.** Casanovo 5.x puts the *naked*
+  peptide in the `sequence` column and the modified peptidoform (e.g. `M[Oxidation]AVEVTEFAK`) in
+  `opt_global_cv_MS:1003169_proforma_peptidoform_sequence`. `ResultsParser` prefers that column and
+  falls back to `sequence` for older Casanovo. All bracket parsing lives in `reader/ProformaPeptideParser`.
+- **Modification position convention** (shared by `ProformaPeptideParser`, `utils/ModParsingUtils`,
+  `XMLBuilder`): `0` = N-terminal mod; `1..length` = the 1-based residue. There is **no** separate
+  C-terminal position — a mod on the last residue is simply position `length`.
+- **Static (fixed) mods are derived from the config**, never hard-coded. `utils/StaticModificationUtils`
+  reads `allowed_fixed_mods` and computes the mass change as
+  `residues["C[Carbamidomethyl]"] − standardMass("C")`, using `utils/AminoAcidMasses` because the bare
+  residue (e.g. C) is absent from the config's residue map. Fixed-mod tokens are **skipped** during
+  variable-mod parsing, so carbamidomethyl is emitted as a static mod and never as a per-peptide mod.
+- **Reported-peptide identity** is the rounded string from
+  `ModParsingUtils.getRoundedReportedPeptideString` (naked sequence + integer-rounded mod masses).
+  `CasanovoReportedPeptide.equals/hashCode` key on this string — that is how PSMs are grouped into peptides.
+- **Multiple spectrum files**: one Casanovo run may search several files. `SearchMetadata` maps each
+  `ms_run[N]` index → filename; every `CasanovoPSM` carries its `msRunIndex` (parsed from `spectra_ref`);
+  `XMLBuilder` stamps each PSM with its own file. Do not assume a single scan file.
+- **eFDR** (`EstimatedFDRCalculator.computeEstimatedFdrByScore`) = mean posterior error probability
+  (`1 − adjustedScore`) over all PSMs at or above each score threshold, where
+  `adjustedScore = score < 0 ? score + 1 : score`.
+- **Errors and exit codes.** The pipeline (`ConverterRunner` and the stages) throws
+  `CasanovoConversionException` for expected failures and never calls `System.exit`. `MainProgram` is a
+  picocli `Callable<Integer>`; it is the only place that maps exceptions to exit codes (0 success,
+  1 conversion error, 2 picocli usage error), and only `main()` calls `System.exit`.
+
+### Version stamping
+
+The runtime program version is read from `limelight_version_from_build.properties`, generated by the
+`generateVersionProperties` Gradle task into `build/generated-resources/version/` (not the source tree).
+It is populated from the `LIMELIGHT_RELEASE_TAG` env var (set by CI on release) plus git metadata read
+gracefully via grgit — the build still works with no `.git` directory.
+
+## Testing
+
+- Fixtures in `src/test/resources/casanovo/` are **authentic Casanovo 5.2.0 output, trimmed**: tiny
+  `single-file.mztab` / `two-files.mztab` for precise assertions, and `medium.mztab` (~500 PSMs) for a
+  realistic smoke test with hard-coded expected counts.
+- `integration/ConversionTestSupport` runs the full pipeline to a temp file and unmarshals the result
+  into the `LimelightInput` DTO tree; integration tests assert on that tree, not on XML text.
+- The pipeline is tested in-process: `ConverterRunnerTest` runs `ConverterRunner` directly, and
+  `MainProgramTest` drives the CLI via picocli's `execute(...)` and asserts exit codes (only `main()`
+  calls `System.exit`). `ConversionTestSupport` drives the stages directly for the DTO-tree integration
+  assertions.
+- **Do not commit large data files.** Full-scale runs (tens of thousands of PSMs) are covered only by
+  the opt-in `FullScaleSmokeTest`, which is excluded from the normal `test` task and writes its
+  (potentially hundreds of MB) output to a temp file that is deleted on exit:
+
+  ```bash
+  ./gradlew fullScaleSmokeTest \
+      -Dcasanovo.smoke.mztab=/path/large.mztab \
+      -Dcasanovo.smoke.config=/path/casanovo.yaml
+  ```
+
+## Known open items (deferred work)
+
+Identified during the refactor and intentionally left for later:
+
+- **Synthetic-only test coverage.** No real sample contains an **N-terminal modification** or a
+  per-position-score count of `length + 1` (the `XMLBuilder` path that multiplies the N-terminal-mod
+  score into residue 1). Both are covered only by hand-built ProForma fixtures — re-validate against
+  real Casanovo output if such an example appears.
+- **Launcher default heap.** The `casanovoToLimelightXML` wrapper hard-codes `-Xmx16192m` (overridable
+  via `CONVERTER_JAVA_PARAMS`), which can exceed container memory limits. Reviewed and intentionally left
+  unchanged to preserve behavior; revisit (e.g. `-XX:MaxRAMPercentage`) only if it surfaces in the wild.

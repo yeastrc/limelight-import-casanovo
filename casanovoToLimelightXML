@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-##    Runs cometPercolator2LimelightXML.jar  to convert Comet to Limelight XML
+##    Runs casanovoToLimelightXML.jar to convert Casanovo results to Limelight XML
 
 #  Works when run through a sym link:
 path_of_script="$(dirname "$(readlink -f "$0")")"

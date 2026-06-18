@@ -1,6 +1,6 @@
 /*
  * Original author: Michael Riffle <mriffle .at. uw.edu>
- *                  
+ *
  * Copyright 2018 University of Washington - Seattle, WA
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,48 +21,77 @@ package org.yeastrc.limelight.xml.casanovo.main;
 import org.yeastrc.limelight.xml.casanovo.builder.XMLBuilder;
 import org.yeastrc.limelight.xml.casanovo.objects.CasanovoResults;
 import org.yeastrc.limelight.xml.casanovo.objects.ConversionParameters;
+import org.yeastrc.limelight.xml.casanovo.objects.SearchMetadata;
 import org.yeastrc.limelight.xml.casanovo.reader.ConfigParser;
 import org.yeastrc.limelight.xml.casanovo.reader.ResultsParser;
-import org.yeastrc.limelight.xml.casanovo.objects.SearchMetadata;
 import org.yeastrc.limelight.xml.casanovo.reader.SearchMetadataParser;
 import org.yeastrc.limelight.xml.casanovo.utils.EstimatedFDRCalculator;
+import org.yeastrc.limelight.xml.casanovo.utils.StaticModificationUtils;
 
+import java.io.File;
+import java.math.BigDecimal;
+import java.util.Map;
+
+/**
+ * Orchestrates the conversion pipeline. This is a library entry point: it validates its inputs and
+ * signals failure by throwing {@link CasanovoConversionException}; it never calls {@code System.exit},
+ * so it can be invoked in-process (e.g. from tests or an embedding program).
+ */
 public class ConverterRunner {
 
-	// quickly get a new instance of this class
-	public static ConverterRunner createInstance() { return new ConverterRunner(); }
-	
-	
-	public void convertToLimelightXML(ConversionParameters conversionParameters ) throws Throwable {
+    // quickly get a new instance of this class
+    public static ConverterRunner createInstance() { return new ConverterRunner(); }
 
-		System.err.print( "Reading config file (" + conversionParameters.getConfigFile().getName() + ")..." );
-		ConfigParser configParser = new ConfigParser(conversionParameters.getConfigFile().getAbsolutePath());
-		System.err.println( " Done." );
+    public void convertToLimelightXML(ConversionParameters conversionParameters) throws CasanovoConversionException {
 
-		System.err.print( "Reading metadata from mztab (" + conversionParameters.getMztabFile().getName() + ")..." );
-		SearchMetadata searchMetadata = (new SearchMetadataParser()).parse(conversionParameters.getMztabFile().getAbsolutePath());
-		System.err.println( " Done." );
+        File configFile = conversionParameters.getConfigFile();
+        File mztabFile = conversionParameters.getMztabFile();
 
-		System.err.print( "Reading search results (" + conversionParameters.getMztabFile().getName() + ") into memory..." );
-		CasanovoResults casanovoResults = ResultsParser.getResults(conversionParameters.getMztabFile(), configParser);
-		System.err.println( " Done." );
+        if (configFile == null || !configFile.exists()) {
+            throw new CasanovoConversionException("Could not find config file: "
+                    + (configFile == null ? "(none provided)" : configFile.getAbsolutePath()));
+        }
+        if (mztabFile == null || !mztabFile.exists()) {
+            throw new CasanovoConversionException("Could not find mztab file: "
+                    + (mztabFile == null ? "(none provided)" : mztabFile.getAbsolutePath()));
+        }
 
-		if(casanovoResults.getPeptidePSMMap().isEmpty()) {
-			System.err.println("\nDid not find any results in Casanovo output. Terminating.");
-			System.exit(1);
-		}
+        try {
+            System.err.print("Reading config file (" + configFile.getName() + ")...");
+            ConfigParser configParser = new ConfigParser(configFile.getAbsolutePath());
+            System.err.println(" Done.");
 
-		System.err.print( "Adding estimated FDR calculations to Casanovo PSMs..." );
-		EstimatedFDRCalculator.generateEstimatedFDRMap(casanovoResults);
-		System.err.println( " Done." );
+            System.err.print("Reading metadata from mztab (" + mztabFile.getName() + ")...");
+            SearchMetadata searchMetadata = new SearchMetadataParser().parse(mztabFile.getAbsolutePath());
+            System.err.println(" Done.");
 
-		System.err.print( "Writing out XML..." );
-		(new XMLBuilder()).buildAndSaveXML( conversionParameters, searchMetadata, casanovoResults);
-		System.err.println( " Done." );
+            System.err.print("Reading search results (" + mztabFile.getName() + ") into memory...");
+            CasanovoResults casanovoResults = ResultsParser.getResults(mztabFile, configParser);
+            System.err.println(" Done.");
 
-		System.err.print( "Validating Limelight XML..." );
-		LimelightXMLValidator.validateLimelightXML(conversionParameters.getLimelightXMLOutputFile());
-		System.err.println( " Done." );
-		
-	}
+            if (casanovoResults.getPeptidePSMMap().isEmpty()) {
+                throw new CasanovoConversionException("Did not find any results in Casanovo output.");
+            }
+
+            System.err.print("Adding estimated FDR calculations to Casanovo PSMs...");
+            EstimatedFDRCalculator.generateEstimatedFDRMap(casanovoResults);
+            System.err.println(" Done.");
+
+            Map<String, BigDecimal> staticModifications = StaticModificationUtils.getFixedModificationMasses(configParser);
+
+            System.err.print("Writing out XML...");
+            new XMLBuilder().buildAndSaveXML(conversionParameters, searchMetadata, casanovoResults, staticModifications);
+            System.err.println(" Done.");
+
+            System.err.print("Validating Limelight XML...");
+            LimelightXMLValidator.validateLimelightXML(conversionParameters.getLimelightXMLOutputFile());
+            System.err.println(" Done.");
+
+        } catch (CasanovoConversionException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new CasanovoConversionException(
+                    "Error converting Casanovo results to Limelight XML: " + e.getMessage(), e);
+        }
+    }
 }

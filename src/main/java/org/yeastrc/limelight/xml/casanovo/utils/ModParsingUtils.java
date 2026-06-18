@@ -6,37 +6,40 @@ import java.util.Map;
 
 public class ModParsingUtils {
 
+	/**
+	 * Build the reported-peptide string used as the grouping identity for a peptide: the naked
+	 * sequence with each modification's mass rounded to a whole number and rendered inline, e.g.
+	 * {@code n[42]PEPTIDE} for an N-terminal mod or {@code PEPTIM[16]DE} for a residue mod.
+	 *
+	 * <p>Position convention matches {@link org.yeastrc.limelight.xml.casanovo.reader.ProformaPeptideParser}:
+	 * {@code 0} = N-terminal; {@code 1..length} = the (1-based) residue, where {@code length} is the
+	 * final residue (there is no separate C-terminal position).
+	 */
 	public static String getRoundedReportedPeptideString( String nakedPeptideSequence, Map<Integer, BigDecimal> modMap ) {
-				
+
 		if( modMap == null || modMap.size() < 1 )
 			return nakedPeptideSequence;
-		
+
 		StringBuilder sb = new StringBuilder();
 
 		if(modMap.containsKey(0)) {
-			sb.append("n[" + modMap.get(0).setScale( 0, RoundingMode.HALF_UP ).toString() + "]");
+			sb.append("n[").append( round( modMap.get(0) ) ).append("]");
 		}
 
 		for (int i = 0; i < nakedPeptideSequence.length(); i++){
-		    String r = String.valueOf( nakedPeptideSequence.charAt(i) );
-		    sb.append( r );
-		    
-		    if( modMap.containsKey( i + 1 ) ) {
+			sb.append( nakedPeptideSequence.charAt(i) );
 
-		    	BigDecimal mass = modMap.get( i + 1 );
-		    	
-		    	sb.append( "[" );
-		    	sb.append( mass.setScale( 0, RoundingMode.HALF_UP ).toString() );
-		    	sb.append( "]" );
-		    	
-		    }
+			BigDecimal mass = modMap.get( i + 1 );
+			if( mass != null ) {
+				sb.append("[").append( round( mass ) ).append("]");
+			}
 		}
 
-		if(modMap.containsKey(nakedPeptideSequence.length())) {
-			sb.append("c[" + sb.append( modMap.get(nakedPeptideSequence.length()).setScale( 0, RoundingMode.HALF_UP ).toString() ) + "]");
-		}
-				
 		return sb.toString();
+	}
+
+	private static String round( BigDecimal mass ) {
+		return mass.setScale( 0, RoundingMode.HALF_UP ).toString();
 	}
 
 }

@@ -1,0 +1,5 @@
+MTD	mzTab-version	1.0.0
+MTD	software[1]	[MS, MS:1003281, Casanovo, 5.2.0]
+MTD	software[1]-setting[1]	model = /home/mriffle/.cache/casanovo/casanovo_orbitrap_v5-2-0.ckpt
+MTD	ms_run[1]-location	file:///home/mriffle/tmp/test2.mzML
+PSH	sequence	PSM_ID	accession	unique	database	database_version	search_engine	search_engine_score[1]	modifications	retention_time	charge	exp_mass_to_charge	calc_mass_to_charge	spectra_ref	pre	post	start	end	opt_global_aa_scores	opt_global_cv_MS:1003169_proforma_peptidoform_sequence
