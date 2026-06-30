@@ -160,6 +160,10 @@ public class XMLBuilder {
 		// Define the peptide and PSM data
 		//
 
+		// When more than one spectrum file was searched, tag each PSM with a subgroup (the scan file's
+		// base name, extension stripped) so Limelight can compare the files. A single-file run gets none.
+		boolean multipleScanFiles = searchMetadata.getScanFileNames().size() > 1;
+
 		ReportedPeptides reportedPeptides = new ReportedPeptides();
 		limelightInputRoot.setReportedPeptides( reportedPeptides );
 		
@@ -211,7 +215,11 @@ public class XMLBuilder {
 
 				xmlPsm.setScanNumber( new BigInteger( String.valueOf( psm.getScanNumber() ) ) );
 				xmlPsm.setPrecursorCharge( new BigInteger( String.valueOf( psm.getCharge() ) ) );
-				xmlPsm.setScanFileName(searchMetadata.getScanFileName(psm.getMsRunIndex()));
+				String scanFileName = searchMetadata.getScanFileName(psm.getMsRunIndex());
+				xmlPsm.setScanFileName(scanFileName);
+				if ( multipleScanFiles ) {
+					xmlPsm.setSubgroupName( baseFileName( scanFileName ) );
+				}
 				xmlPsm.setPrecursorMZ(psm.getPrecursorMZ());
 
 				// add in the filterable PSM annotations (e.g., score)
@@ -372,7 +380,17 @@ public class XMLBuilder {
 
 		//make the xml file
 		CreateImportFileFromJavaObjectsMain.getInstance().createImportFileFromJavaObjectsMain( conversionParameters.getLimelightXMLOutputFile(), limelightInputRoot);
-		
+
+	}
+
+	/**
+	 * The scan file's base name: the file name (already path-stripped by {@code SearchMetadataParser})
+	 * with its final extension removed, e.g. {@code test2.mzML} &rarr; {@code test2}. A name with no
+	 * extension, or whose only dot is a leading one, is returned unchanged.
+	 */
+	private static String baseFileName( String fileName ) {
+		int dot = fileName.lastIndexOf('.');
+		return dot > 0 ? fileName.substring(0, dot) : fileName;
 	}
 
 }

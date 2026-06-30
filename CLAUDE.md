@@ -69,7 +69,10 @@ annotation-type registries consumed by `XMLBuilder`), `constants/`, `main/`.
   `CasanovoReportedPeptide.equals/hashCode` key on this string — that is how PSMs are grouped into peptides.
 - **Multiple spectrum files**: one Casanovo run may search several files. `SearchMetadata` maps each
   `ms_run[N]` index → filename; every `CasanovoPSM` carries its `msRunIndex` (parsed from `spectra_ref`);
-  `XMLBuilder` stamps each PSM with its own file. Do not assume a single scan file.
+  `XMLBuilder` stamps each PSM with its own file. Do not assume a single scan file. When more than one
+  scan file is present, `XMLBuilder` also sets each PSM's Limelight `subgroupName` to the scan file's
+  base name (extension stripped, e.g. `test2.mzML` → `test2`) so the files can be compared as subgroups;
+  a single-file run leaves `subgroupName` unset.
 - **eFDR** (`EstimatedFDRCalculator.computeEstimatedFdrByScore`) = mean posterior error probability
   (`1 − adjustedScore`) over all PSMs at or above each score threshold, where
   `adjustedScore = score < 0 ? score + 1 : score`.

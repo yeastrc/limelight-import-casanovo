@@ -121,6 +121,32 @@ public class ConversionIntegrationCharacterizationTest {
     }
 
     @Test
+    void multipleInputFilesTagEachPsmWithScanFileBaseNameSubgroup() throws Throwable {
+        LimelightInput in = unmarshal(convert(TWO_FILES, CONFIG));
+        List<Psm> psms = allPsms(in);
+
+        // subgroup is the scan file's base name (extension stripped): test1.mzML -> test1, etc.
+        Map<String, String> subgroupByFile = psms.stream().collect(Collectors.toMap(
+                Psm::getScanFileName, Psm::getSubgroupName, (a, b) -> a));
+        assertEquals("test1", subgroupByFile.get("test1.mzML"));
+        assertEquals("test2", subgroupByFile.get("test2.mzML"));
+
+        // every PSM in a multi-file run carries a non-null subgroup
+        assertTrue(psms.stream().allMatch(p -> p.getSubgroupName() != null),
+                "every PSM in a multi-file run must carry a subgroup name");
+    }
+
+    @Test
+    void singleInputFileLeavesSubgroupUnset() throws Throwable {
+        LimelightInput in = unmarshal(convert(SINGLE, CONFIG));
+        List<Psm> psms = allPsms(in);
+
+        assertFalse(psms.isEmpty(), "fixture should produce PSMs");
+        assertTrue(psms.stream().allMatch(p -> p.getSubgroupName() == null),
+                "a single-file run must not tag PSMs with a subgroup");
+    }
+
+    @Test
     void searchProgramCarriesVersionAndModel() throws Throwable {
         LimelightInput in = unmarshal(convert(SINGLE, CONFIG));
 
